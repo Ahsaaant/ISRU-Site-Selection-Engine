@@ -17,5 +17,22 @@ def read_raster(file_path):
 # Read the raster file and get its data and scale factor.
 data, illumination_scale_factor = read_raster('data/SunVisibility(abgvis_85S_060M_201608).tiff')
 
-permanently_shadowed_region = [pixel > 0 for pixel in data.flatten()]
-print(data)
+def get_illumination_masks(data, scale_factor):
+    """
+    Creates two masks for the illuminated region based on the raster data and scale factor.
+    
+    Parameters:
+    data (numpy.ndarray): The raster data.
+    scale_factor (float): The scale factor for the raster data.
+    
+    Returns:
+    numpy.ndarray: A boolean mask where highly illuminated pixels are True.
+    numpy.ndarray: A boolean mask where shadowed pixels are True.
+    """
+
+    data = data * scale_factor  # Scale the data using the provided scale factor.
+
+    # Create a boolean mask for the illuminated region and the shadowed region respectively.
+    return np.where(data > 0.6, True, False), np.where(data == 0, True, False)
+
+highly_lit_mask, shadowed_mask = get_illumination_masks(data, illumination_scale_factor)
