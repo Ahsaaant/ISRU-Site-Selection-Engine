@@ -1,0 +1,2 @@
+# Ignore the data folder which contains the large data files and rasters.
+data/
