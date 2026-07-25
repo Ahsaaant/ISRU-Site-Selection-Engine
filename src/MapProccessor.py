@@ -43,16 +43,6 @@ def resample_raster(source_data_path, target_data_path):
 
         return resampled_data
 
-
-# Read the raster file and get its data and scale factor.
-sun_vis_data, sun_vis_scale = read_raster(
-    'data/SunVisibility(abgvis_85S_060M_201608).tiff'
-    )
-
-altitude_data, altitude_scale = read_raster(
-    'data/Altitude-rasterize.tif'
-    )
-
 def get_illumination_masks(data, scale_factor):
     """
     Creates two masks based on the illuminated and shadowed regions of the raster.
@@ -70,6 +60,15 @@ def get_illumination_masks(data, scale_factor):
 
     # Create a boolean mask for the illuminated region and the shadowed region respectively.
     return np.where(data > 0.6, True, False), np.where(data == 0, True, False)
+
+# Read the raster file and get its data and scale factor.
+sun_vis_data, sun_vis_scale = read_raster(
+    'data/SunVisibility(abgvis_85S_060M_201608).tiff'
+    )
+
+altitude_data, altitude_scale = read_raster(
+    'data/Altitude-rasterize.tif'
+    )
 
 highly_lit_mask, shadowed_mask = get_illumination_masks(sun_vis_data, sun_vis_scale)
 
