@@ -1,6 +1,9 @@
 import rasterio, numpy as np, scipy, matplotlib.pyplot as plt
 from rasterio.warp import reproject, Resampling
 
+# The LOLA reference sphere radius is 1737400 meters, which is used to adjust the altitude data.
+ALTITUDE_OFFSET = 1737400
+
 def read_raster(file_path):
     """
     Reads a raster file and returns its data as a numpy array with required metadata.
@@ -38,12 +41,27 @@ def resample_raster(source_data_path, target_data_path):
             dst_transform = target_data_file.transform,
             src_crs = start_data_file.crs,
             dst_crs = target_data_file.crs,
+            src_nodata = start_data_file.nodata,
+            dst_nodata = start_data_file.nodata, # Use the same nodata value for the destination as the source.
             resampling = Resampling.average
         )
 
+        resampled_data[resampled_data == start_data_file.nodata] = np.nan
         return resampled_data
 
-def get_illumination_masks(data, scale_factor):
+def radius_to_elevation(altitude_data):
+    """
+    Converts altitude data to elevation data by subtracting the LOLA reference sphere radius.
+    
+    Parameters:
+    altitude_data (numpy.ndarray): The altitude data.
+    
+    Returns:
+    numpy.ndarray: The elevation data.
+    """
+    return altitude_data - ALTITUDE_OFFSET
+
+def get_illumination_masks(data, scale_factor, lit_threshold=0.6):
     """
     Creates two masks based on the illuminated and shadowed regions of the raster.
     
@@ -58,16 +76,12 @@ def get_illumination_masks(data, scale_factor):
 
     data = data * scale_factor  # Scale the data using the provided scale factor.
 
-    # Create a boolean mask for the illuminated region and the shadowed region respectively.
-    return np.where(data > 0.6, True, False), np.where(data == 0, True, False)
+    # Create a boolean mask for the illuminated region and the shadowed regions (where data is less than or equal to 0) respectively.
+    return data > lit_threshold, data <= 0
 
-# Read the raster file and get its data and scale factor.
+# Read the illumination raster file and get its data and scale factor.
 sun_vis_data, sun_vis_scale = read_raster(
     'data/SunVisibility(abgvis_85S_060M_201608).tiff'
-    )
-
-altitude_data, altitude_scale = read_raster(
-    'data/Altitude-rasterize.tif'
     )
 
 highly_lit_mask, shadowed_mask = get_illumination_masks(sun_vis_data, sun_vis_scale)
@@ -76,4 +90,5 @@ resampled_altitude_data = resample_raster(
     'data/Altitude-rasterize.tif',
     'data/SunVisibility(abgvis_85S_060M_201608).tiff'
     )
-print("Resampled Altitude Data Shape:", resampled_altitude_data.shape)
+
+elevation_data = radius_to_elevation(resampled_altitude_data)
