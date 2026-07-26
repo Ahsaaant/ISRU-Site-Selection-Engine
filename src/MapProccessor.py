@@ -92,3 +92,5 @@ resampled_altitude_data = resample_raster(
     )
 
 elevation_data = radius_to_elevation(resampled_altitude_data)
+elevation_gradient = np.gradient(elevation_data)
+print("Elevation Gradient:", elevation_gradient)
