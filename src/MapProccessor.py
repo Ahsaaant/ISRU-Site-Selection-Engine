@@ -116,7 +116,9 @@ resampled_altitude_data = resample_raster(
 slope_data = elevation_to_slope(radius_to_elevation(resampled_altitude_data))
 highly_lit_mask, shadowed_mask = get_illumination_masks(sun_vis_data, sun_vis_scale)
 
-plt.imshow(highly_lit_mask, cmap='terrain')
-plt.colorbar(label='Illumination Mask')
-plt.title('Illumination Mask')
+
+plt.hist((sun_vis_data * sun_vis_scale) > 0, bins=10, color='blue', alpha=0.7)
+print("Count of in-between pixels:", np.sum(((sun_vis_data * sun_vis_scale) > 0.1) & ((sun_vis_data * sun_vis_scale) < 0.9)))
+plt.xlabel('Illumination Values')
+plt.ylabel('Frequency')
 plt.show()
