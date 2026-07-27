@@ -79,18 +79,44 @@ def get_illumination_masks(data, scale_factor, lit_threshold=0.6):
     # Create a boolean mask for the illuminated region and the shadowed regions (where data is less than or equal to 0) respectively.
     return data > lit_threshold, data <= 0
 
+def elevation_to_slope(elevation_data, pixel_size_x = 60, pixel_size_y = 60):
+    """
+    Calculates the slope of the elevation data using numpy's gradient function.
+    
+    Parameters:
+    elevation_data (numpy.ndarray): The elevation data.
+    pixel_size_x (float): The size of each pixel in the raster data along the x-axis.
+    pixel_size_y (float): The size of each pixel in the raster data along the y-axis.
+    
+    Returns:
+    numpy.ndarray: The slope of the elevation data.
+    """
+    # Calculate the gradient
+    grad_y, grad_x = np.gradient(elevation_data, pixel_size_x, pixel_size_y)
+
+    # Calculate the slope as the magnitude of the gradient vector
+    tangent = np.sqrt(grad_x**2 + grad_y**2)
+
+    # Convert the tangent to slope in degrees
+    slope = np.degrees(np.arctan(tangent))  
+    
+    return slope
+
 # Read the illumination raster file and get its data and scale factor.
 sun_vis_data, sun_vis_scale = read_raster(
     'data/SunVisibility(abgvis_85S_060M_201608).tiff'
     )
 
-highly_lit_mask, shadowed_mask = get_illumination_masks(sun_vis_data, sun_vis_scale)
-
+# Resample the altitude raster file to match the resolution of the illumination raster file.
 resampled_altitude_data = resample_raster(
     'data/Altitude-rasterize.tif',
     'data/SunVisibility(abgvis_85S_060M_201608).tiff'
     )
 
-elevation_data = radius_to_elevation(resampled_altitude_data)
-elevation_gradient = np.gradient(elevation_data)
-print("Elevation Gradient:", elevation_gradient)
+slope_data = elevation_to_slope(radius_to_elevation(resampled_altitude_data))
+highly_lit_mask, shadowed_mask = get_illumination_masks(sun_vis_data, sun_vis_scale)
+
+plt.imshow(highly_lit_mask, cmap='terrain')
+plt.colorbar(label='Illumination Mask')
+plt.title('Illumination Mask')
+plt.show()
