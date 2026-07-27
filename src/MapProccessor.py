@@ -20,7 +20,7 @@ def read_raster(file_path):
 
 def resample_raster(source_data_path, target_data_path):
     """
-    Resamples the raster data based on the provided scale factor.
+    Resamples the raster data based on the provided target data to mimic its resolution.
     
     Parameters:
     source_data_path (str): The path to the source raster file.
@@ -28,6 +28,8 @@ def resample_raster(source_data_path, target_data_path):
     
     Returns:
     numpy.ndarray: The resampled raster data.
+    float: The pixel size along the x-axis of the target raster.
+    float: The pixel size along the y-axis of the target raster.
     """
     with rasterio.open(source_data_path) as start_data_file, rasterio.open(target_data_path) as target_data_file:
 
@@ -47,7 +49,7 @@ def resample_raster(source_data_path, target_data_path):
         )
 
         resampled_data[resampled_data == start_data_file.nodata] = np.nan
-        return resampled_data
+        return resampled_data, target_data_file.res[0], target_data_file.res[1]  # Return the resampled data along with the pixel sizes.
 
 def radius_to_elevation(altitude_data):
     """
@@ -61,13 +63,14 @@ def radius_to_elevation(altitude_data):
     """
     return altitude_data - ALTITUDE_OFFSET
 
-def get_illumination_masks(data, scale_factor, lit_threshold=0.6):
+def get_illumination_masks(data, scale_factor, lit_threshold=0.8):
     """
     Creates two masks based on the illuminated and shadowed regions of the raster.
     
     Parameters:
     data (numpy.ndarray): The raster data.
     scale_factor (float): The scale factor for the raster data.
+    lit_threshold (float): The threshold value to determine highly illuminated pixels.
     
     Returns:
     numpy.ndarray: A boolean mask where highly illuminated pixels are True.
@@ -79,7 +82,7 @@ def get_illumination_masks(data, scale_factor, lit_threshold=0.6):
     # Create a boolean mask for the illuminated region and the shadowed regions (where data is less than or equal to 0) respectively.
     return data > lit_threshold, data <= 0
 
-def elevation_to_slope(elevation_data, pixel_size_x = 60, pixel_size_y = 60):
+def elevation_to_slope(elevation_data, pixel_size_x, pixel_size_y):
     """
     Calculates the slope of the elevation data using numpy's gradient function.
     
@@ -107,18 +110,20 @@ sun_vis_data, sun_vis_scale = read_raster(
     'data/SunVisibility(abgvis_85S_060M_201608).tiff'
     )
 
+# Read the altitude raster file and get its raw data and scale factor.
+raw_altitude_data, altitude_scale = read_raster(
+    'data/Altitude-rasterize.tif'
+    )
+
 # Resample the altitude raster file to match the resolution of the illumination raster file.
-resampled_altitude_data = resample_raster(
+resampled_altitude_data, resampled_pixel_size_x, resampled_pixel_size_y = resample_raster(
     'data/Altitude-rasterize.tif',
     'data/SunVisibility(abgvis_85S_060M_201608).tiff'
     )
 
-slope_data = elevation_to_slope(radius_to_elevation(resampled_altitude_data))
+# Calculate the slope of the resampled elevation data using the pixel sizes from the raw altitude data.
+slope_data = elevation_to_slope(radius_to_elevation(resampled_altitude_data), resampled_pixel_size_x, resampled_pixel_size_y)
+
+# Get the two light masks based on the illumination data and its scale factor.
 highly_lit_mask, shadowed_mask = get_illumination_masks(sun_vis_data, sun_vis_scale)
 
-
-plt.hist((sun_vis_data * sun_vis_scale) > 0, bins=10, color='blue', alpha=0.7)
-print("Count of in-between pixels:", np.sum(((sun_vis_data * sun_vis_scale) > 0.1) & ((sun_vis_data * sun_vis_scale) < 0.9)))
-plt.xlabel('Illumination Values')
-plt.ylabel('Frequency')
-plt.show()
