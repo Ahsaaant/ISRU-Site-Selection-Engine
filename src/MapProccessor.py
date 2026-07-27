@@ -1,6 +1,14 @@
 import rasterio, numpy as np, scipy, matplotlib.pyplot as plt
 from rasterio.warp import reproject, Resampling
 
+# rasterio 1.5.0 triggers a NumPy 2.5 shape deprecation in .scales; harmless, tracked upstream.
+import warnings
+warnings.filterwarnings(
+    "ignore",
+    message="Setting the shape on a NumPy array has been deprecated",
+    category=DeprecationWarning,
+)
+
 # The LOLA reference sphere radius is 1737400 meters, which is used to adjust the altitude data.
 ALTITUDE_OFFSET = 1737400
 
@@ -15,6 +23,7 @@ def read_raster(file_path):
     numpy.ndarray: The data from the raster file.
     float: The scale factor for the raster data.
     """
+
     with rasterio.open(file_path) as src:
         return src.read(1), src.scales[0]
 
@@ -31,6 +40,7 @@ def resample_raster(source_data_path, target_data_path):
     float: The pixel size along the x-axis of the target raster.
     float: The pixel size along the y-axis of the target raster.
     """
+
     with rasterio.open(source_data_path) as start_data_file, rasterio.open(target_data_path) as target_data_file:
 
         # Create an empy numpy array with the new shape based on the target data shape.
@@ -61,9 +71,10 @@ def radius_to_elevation(altitude_data):
     Returns:
     numpy.ndarray: The elevation data.
     """
+
     return altitude_data - ALTITUDE_OFFSET
 
-def get_illumination_masks(data, scale_factor, lit_threshold=0.8):
+def get_illumination_masks(data, scale_factor, lit_threshold=0.44):
     """
     Creates two masks based on the illuminated and shadowed regions of the raster.
     
@@ -94,6 +105,7 @@ def elevation_to_slope(elevation_data, pixel_size_x, pixel_size_y):
     Returns:
     numpy.ndarray: The slope of the elevation data.
     """
+
     # Calculate the gradient
     grad_y, grad_x = np.gradient(elevation_data, pixel_size_x, pixel_size_y)
 
@@ -104,6 +116,26 @@ def elevation_to_slope(elevation_data, pixel_size_x, pixel_size_y):
     slope = np.degrees(np.arctan(tangent))  
     
     return slope
+
+def plot_layers(data = [], title = [], cmap = [], colorbar_label = [], save_path = []):
+    """
+    Plots raster layers using matplotlib.
+    
+    Parameters:
+    data (list of np.ndarray): The raster data to be plotted.
+    title (list of str): The titles of the plots.
+    cmap (list of str): The colormaps to be used for the plots.
+    colorbar_label (list of str): The labels for the colorbars.
+    """
+
+    for i in range(len(data)):
+        plt.figure(figsize=(10, 10))
+        plt.imshow(data[i], cmap=cmap[i])
+        plt.title(title[i])
+        cbar = plt.colorbar()
+        cbar.set_label(colorbar_label[i])
+        
+    plt.show()
 
 # Read the illumination raster file and get its data and scale factor.
 sun_vis_data, sun_vis_scale = read_raster(
@@ -126,4 +158,11 @@ slope_data = elevation_to_slope(radius_to_elevation(resampled_altitude_data), re
 
 # Get the two light masks based on the illumination data and its scale factor.
 highly_lit_mask, shadowed_mask = get_illumination_masks(sun_vis_data, sun_vis_scale)
+print(highly_lit_mask.sum())
 
+plot_layers(
+    data = [radius_to_elevation(resampled_altitude_data), slope_data, highly_lit_mask, shadowed_mask],
+    title = ['Elevation Map', 'Slope Map', 'Highly Lit Mask', 'Shadowed Mask'],
+    cmap = ['terrain', 'viridis', 'gray', 'gray'],
+    colorbar_label = ['Elevation (m)', 'Slope (degrees)', 'Highly Lit Pixels', 'Shadowed Pixels'],
+)
