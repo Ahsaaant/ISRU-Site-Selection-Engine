@@ -74,14 +74,14 @@ def radius_to_elevation(altitude_data):
 
     return altitude_data - ALTITUDE_OFFSET
 
-def get_illumination_masks(data, scale_factor, lit_threshold=0.44):
+def get_illumination_masks(data, scale_factor, lit_threshold=0.5):
     """
     Creates two masks based on the illuminated and shadowed regions of the raster.
     
     Parameters:
     data (numpy.ndarray): The raster data.
     scale_factor (float): The scale factor for the raster data.
-    lit_threshold (float): The threshold value to determine highly illuminated pixels.
+    lit_threshold (float): The threshold value to determine illuminated pixels set at 0.5 as only 1% of the area is higher than that.
     
     Returns:
     numpy.ndarray: A boolean mask where highly illuminated pixels are True.
@@ -140,11 +140,6 @@ def plot_layers(data = [], title = [], cmap = [], colorbar_label = [], save_path
 # Read the illumination raster file and get its data and scale factor.
 sun_vis_data, sun_vis_scale = read_raster(
     'data/SunVisibility(abgvis_85S_060M_201608).tiff'
-    )
-
-# Read the altitude raster file and get its raw data and scale factor.
-raw_altitude_data, altitude_scale = read_raster(
-    'data/Altitude-rasterize.tif'
     )
 
 # Resample the altitude raster file to match the resolution of the illumination raster file.
