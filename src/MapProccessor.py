@@ -12,6 +12,7 @@ warnings.filterwarnings(
 # The LOLA reference sphere radius is 1737400 meters, which is used to adjust the altitude data.
 ALTITUDE_OFFSET = 1737400
 
+
 def read_raster(file_path):
     """
     Reads a raster file and returns its data as a numpy array with required metadata.
@@ -26,6 +27,7 @@ def read_raster(file_path):
 
     with rasterio.open(file_path) as src:
         return src.read(1), src.scales[0]
+
 
 def resample_raster(source_data_path, target_data_path):
     """
@@ -61,6 +63,7 @@ def resample_raster(source_data_path, target_data_path):
         resampled_data[resampled_data == start_data_file.nodata] = np.nan
         return resampled_data, target_data_file.res[0], target_data_file.res[1]  # Return the resampled data along with the pixel sizes.
 
+
 def radius_to_elevation(altitude_data):
     """
     Converts altitude data to elevation data by subtracting the LOLA reference sphere radius.
@@ -73,6 +76,7 @@ def radius_to_elevation(altitude_data):
     """
 
     return altitude_data - ALTITUDE_OFFSET
+
 
 def get_illumination_masks(data, scale_factor, lit_threshold=0.5):
     """
@@ -92,6 +96,7 @@ def get_illumination_masks(data, scale_factor, lit_threshold=0.5):
 
     # Create a boolean mask for the illuminated region and the shadowed regions (where data is less than or equal to 0) respectively.
     return data > lit_threshold, data <= 0
+
 
 def elevation_to_slope(elevation_data, pixel_size_x, pixel_size_y):
     """
@@ -116,6 +121,7 @@ def elevation_to_slope(elevation_data, pixel_size_x, pixel_size_y):
     slope = np.degrees(np.arctan(tangent))  
     
     return slope
+
 
 def plot_layers(data = [], title = [], cmap = [], colorbar_label = [], save_path = []):
     """
