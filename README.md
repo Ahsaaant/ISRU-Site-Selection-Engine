@@ -1,6 +1,6 @@
 # ISRU Site Selection Engine
 
-This tool identifies candidate lunar base locations of the south pole of the moon from the proximity to cold traps and well lit power areas.
+This tool identifies candidate lunar base locations at the south pole of the moon from the proximity to cold traps and well lit power areas.
 
 ---
 
@@ -19,4 +19,4 @@ The LDEM was processed inside of QGIS to go from km to m to match the pixel spac
 
 # Dependencies
 
-All the dependencies can be found in Requirements.txt.
+All the dependencies can be found in [Requirements.txt](Requirements.txt).
