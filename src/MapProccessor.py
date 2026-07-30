@@ -78,24 +78,19 @@ def radius_to_elevation(altitude_data):
     return altitude_data - ALTITUDE_OFFSET
 
 
-def get_illumination_masks(data, scale_factor, lit_threshold=0.5):
+def scale_illumination_data(data, scale_factor):
     """
-    Creates two masks based on the illuminated and shadowed regions of the raster.
+    Scale the data of the illumination raster to get a percentage of time that each pixel is illuminated.
     
     Parameters:
     data (numpy.ndarray): The raster data.
     scale_factor (float): The scale factor for the raster data.
-    lit_threshold (float): The threshold value to determine illuminated pixels set at 0.5 as only 1% of the area is higher than that.
-    
+
     Returns:
-    numpy.ndarray: A boolean mask where highly illuminated pixels are True.
-    numpy.ndarray: A boolean mask where shadowed pixels are True.
+    numpy.ndarray: An array representing the illumination of the pixels.
     """
 
-    data = data * scale_factor  # Scale the data using the provided scale factor.
-
-    # Create a boolean mask for the illuminated region and the shadowed regions (where data is less than or equal to 0) respectively.
-    return data > lit_threshold, data <= 0
+    return data * scale_factor
 
 
 def elevation_to_slope(elevation_data, pixel_size_x, pixel_size_y):
@@ -157,13 +152,13 @@ resampled_altitude_data, resampled_pixel_size_x, resampled_pixel_size_y = resamp
 # Calculate the slope of the resampled elevation data using the pixel sizes from the raw altitude data.
 slope_data = elevation_to_slope(radius_to_elevation(resampled_altitude_data), resampled_pixel_size_x, resampled_pixel_size_y)
 
-# Get the two light masks based on the illumination data and its scale factor.
-highly_lit_mask, shadowed_mask = get_illumination_masks(sun_vis_data, sun_vis_scale)
-print(highly_lit_mask.sum())
+# Get the scaled illumination data
+illumination_data = scale_illumination_data(sun_vis_data, sun_vis_scale)
+print(illumination_data.sum())
 
 plot_layers(
-    data = [radius_to_elevation(resampled_altitude_data), slope_data, highly_lit_mask, shadowed_mask],
-    title = ['Elevation Map', 'Slope Map', 'Highly Lit Mask', 'Shadowed Mask'],
+    data = [radius_to_elevation(resampled_altitude_data), slope_data, illumination_data],
+    title = ['Elevation Map', 'Slope Map', 'Illumination Data'],
     cmap = ['terrain', 'viridis', 'gray', 'gray'],
-    colorbar_label = ['Elevation (m)', 'Slope (degrees)', 'Highly Lit Pixels', 'Shadowed Pixels'],
+    colorbar_label = ['Elevation (m)', 'Slope (degrees)', 'Illumination (%)'],
 )
