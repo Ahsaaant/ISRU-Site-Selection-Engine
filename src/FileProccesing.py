@@ -1,4 +1,4 @@
-import rasterio, numpy as np, scipy, matplotlib.pyplot as plt
+import rasterio, numpy as np, matplotlib.pyplot as plt
 from rasterio.warp import reproject, Resampling
 
 # rasterio 1.5.0 triggers a NumPy 2.5 shape deprecation in .scales; harmless, tracked upstream.
@@ -90,7 +90,8 @@ def scale_illumination_data(data, scale_factor):
     numpy.ndarray: An array representing the illumination of the pixels.
     """
 
-    return data * scale_factor
+    # Scale the data and convert it to a percentage
+    return (data * scale_factor) * 100
 
 
 def elevation_to_slope(elevation_data, pixel_size_x, pixel_size_y):
@@ -138,27 +139,31 @@ def plot_layers(data = [], title = [], cmap = [], colorbar_label = [], save_path
         
     plt.show()
 
-# Read the illumination raster file and get its data and scale factor.
-sun_vis_data, sun_vis_scale = read_raster(
-    'data/SunVisibility(abgvis_85S_060M_201608).tiff'
+# Test the functions
+if __name__ == "__main__":
+    # Example usage of the functions
+    altitude_raster_path = "data/Altitude-rasterize.tif"
+    illumination_raster_path = "data/SunVisibility(abgvis_85S_060M_201608).tiff"
+
+    # Read raster data
+    illumination_data, illumination_scale_factor = read_raster(illumination_raster_path)
+    
+    # Resample raster data
+    resampled_altitude_data, pixel_size_x, pixel_size_y = resample_raster(altitude_raster_path, illumination_raster_path)
+    
+    # Convert altitude to elevation
+    elevation_data = radius_to_elevation(resampled_altitude_data)
+    
+    # Scale illumination data
+    scaled_illumination_data = scale_illumination_data(illumination_data, illumination_scale_factor)
+    
+    # Calculate slope from elevation data
+    slope_data = elevation_to_slope(elevation_data, pixel_size_x, pixel_size_y)
+    
+    # Plot the layers
+    plot_layers(
+        data=[elevation_data, scaled_illumination_data, slope_data],
+        title=["Elevation Data", "Illumination Data", "Slope Data"],
+        cmap=["terrain", "gray", "viridis"],
+        colorbar_label=["Elevation (m)", "Illumination (%)", "Slope (degrees)"]
     )
-
-# Resample the altitude raster file to match the resolution of the illumination raster file.
-resampled_altitude_data, resampled_pixel_size_x, resampled_pixel_size_y = resample_raster(
-    'data/Altitude-rasterize.tif',
-    'data/SunVisibility(abgvis_85S_060M_201608).tiff'
-    )
-
-# Calculate the slope of the resampled elevation data using the pixel sizes from the raw altitude data.
-slope_data = elevation_to_slope(radius_to_elevation(resampled_altitude_data), resampled_pixel_size_x, resampled_pixel_size_y)
-
-# Get the scaled illumination data
-illumination_data = scale_illumination_data(sun_vis_data, sun_vis_scale)
-print(illumination_data.sum())
-
-plot_layers(
-    data = [radius_to_elevation(resampled_altitude_data), slope_data, illumination_data],
-    title = ['Elevation Map', 'Slope Map', 'Illumination Data'],
-    cmap = ['terrain', 'viridis', 'gray', 'gray'],
-    colorbar_label = ['Elevation (m)', 'Slope (degrees)', 'Illumination (%)'],
-)
