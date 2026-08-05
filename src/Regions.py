@@ -42,7 +42,9 @@ def calculate_distance(labeled_array, units=1):
 
     # Map of distance from the nearest labelled region
     distance_array = ndimage.distance_transform_edt(labeled_array == 0)  # type: ignore
-    
+    distance_array = np.where(distance_array == 0, np.nan, distance_array) #type: ignore
+    distance_array *= units  # Scale the distances by the specified units
+
     return distance_array  # Return the distance array scaled by the specified units
 
 

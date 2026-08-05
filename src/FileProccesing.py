@@ -136,7 +136,8 @@ def plot_layers(data = [], title = [], cmap = [], colorbar_label = [], save_path
         plt.title(title[i])
         cbar = plt.colorbar()
         cbar.set_label(colorbar_label[i])
-        
+        # if save_path[i]:
+        #     plt.savefig(save_path[i], dpi=300, bbox_inches='tight')
     plt.show()
 
 # Test the functions
