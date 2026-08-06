@@ -2,4 +2,4 @@
 data/
 
 # Ignore the compiled Python files and cache directories.
-src/pycache/
+src/__pycache__/
