@@ -4,7 +4,7 @@ import Regions as rg
 ALTITUDE_RASTER_PATH = "data/Altitude-rasterize.tif"
 ILLUMINATION_RASTER_PATH = "data/SunVisibility(abgvis_85S_060M_201608).tiff"
 PSR_THRESHOLD = 0 # The threshold for permanently shdaowed regions
-PEL_THRESHOLD = 0.75 # The threshold for peaks of eternal light.
+PEL_THRESHOLD = 75 # The threshold for peaks of eternal light (percentage).
 
 def main():
     # Load the altitude and illumination raster data
@@ -32,10 +32,10 @@ def main():
     distance_from_PEL = rg.calculate_distance(PEL_regions, 60)
 
     # Plot the results
-    fp.plot_layers(data=[elevation_data, scaled_illumination_data, slope_data, PSR_regions, distance_from_PSR, PEL_regions, distance_from_PEL],
-                   title=["Elevation", "Scaled Illumination", "Slope", "Labeled Regions", "Distance from PSR", "Labeled Regions", "Distance from PEL"],
-                   cmap=["terrain", "gray", "viridis", "nipy_spectral", "plasma", "nipy_spectral", "plasma"],
-                   colorbar_label=["Elevation (m)", "Illumination (%)", "Slope (degrees)", "Region Labels", "Distance (meters)", "Region Labels", "Distance (meters)"],
-                   save_path=["output/elevation.png", "output/illumination.png", "output/slope.png", "output/psr_regions.png", "output/distance_from_psr.png", "output/pel_regions.png", "output/distance_from_pel.png"])
+    fp.plot_layers(data=[scaled_illumination_data, PSR_regions, distance_from_PSR, PEL_regions, distance_from_PEL, slope_data, elevation_data],
+                   title=["Scaled Illumination", "Labeled Regions", "Distance from PSR", "Labeled Regions", "Distance from PEL", "Slope", "Elevation"],
+                   cmap=["gray", "nipy_spectral", "plasma", "nipy_spectral", "plasma", "terrain", "viridis"],
+                   colorbar_label=["Illumination (%)", "PSR Regions", "Distance (meters)", "PEL Regions", "Distance (meters)", "Slope (degrees)", "Elevation (meters)"],
+                   save_path=["output/illumination.png", "output/psr_regions.png", "output/distance_from_psr.png", "output/pel_regions.png", "output/distance_from_pel.png", "output/slope.png", "output/elevation.png"])
 
 main()
