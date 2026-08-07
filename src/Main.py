@@ -1,8 +1,11 @@
 import FileProccesing as fp
 import Regions as rg
 
+# Constants for file paths
 ALTITUDE_RASTER_PATH = "data/Altitude-rasterize.tif"
 ILLUMINATION_RASTER_PATH = "data/SunVisibility(abgvis_85S_060M_201608).tiff"
+
+# Constants for thresholds
 PSR_THRESHOLD = 0 # The threshold for permanently shdaowed regions
 PEL_THRESHOLD = 75 # The threshold for peaks of eternal light (percentage).
 
