@@ -1,3 +1,6 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
 import FileProccesing as fp
 import Regions as rg
 
@@ -7,7 +10,7 @@ ILLUMINATION_RASTER_PATH = "data/SunVisibility(abgvis_85S_060M_201608).tiff"
 
 # Constants for thresholds
 PSR_THRESHOLD = 0 # The threshold for permanently shdaowed regions
-PEL_THRESHOLD = 75 # The threshold for peaks of eternal light (percentage).
+PEL_THRESHOLD = 55 # The threshold for peaks of eternal light (percentage).
 
 def main():
     # Load the altitude and illumination raster data
@@ -30,15 +33,23 @@ def main():
     PSR_regions, region_count = rg.label_regions(scaled_illumination_data, threshold=PSR_THRESHOLD, greater_than=False)
     PEL_regions, region_count = rg.label_regions(scaled_illumination_data, threshold=PEL_THRESHOLD, greater_than=True)
 
+    # Find the area of labelled regions
+    PSR_region_sizes, PSR_size_stats = rg.region_sizes(PSR_regions)
+    PEL_region_sizes, PEL_size_stats = rg.region_sizes(PEL_regions)
+
     # Calculate distances from labeled regions
     distance_from_PSR = rg.calculate_distance(PSR_regions, 60)
     distance_from_PEL = rg.calculate_distance(PEL_regions, 60)
 
     # Plot the results
-    fp.plot_layers(data=[scaled_illumination_data, PSR_regions, distance_from_PSR, PEL_regions, distance_from_PEL, slope_data, elevation_data],
-                   title=["Scaled Illumination", "Labeled Regions", "Distance from PSR", "Labeled Regions", "Distance from PEL", "Slope", "Elevation"],
-                   cmap=["gray", "nipy_spectral", "plasma", "nipy_spectral", "plasma", "terrain", "viridis"],
-                   colorbar_label=["Illumination (%)", "PSR Regions", "Distance (meters)", "PEL Regions", "Distance (meters)", "Slope (degrees)", "Elevation (meters)"],
-                   save_path=["output/illumination.png", "output/psr_regions.png", "output/distance_from_psr.png", "output/pel_regions.png", "output/distance_from_pel.png", "output/slope.png", "output/elevation.png"])
+    # fp.plot_layers(data=[scaled_illumination_data, PSR_regions, distance_from_PSR, PEL_regions, distance_from_PEL, slope_data, elevation_data],
+    #                title=["Scaled Illumination", "Labeled Regions", "Distance from PSR", "Labeled Regions", "Distance from PEL", "Slope", "Elevation"],
+    #                cmap=["gray", "nipy_spectral", "plasma", "nipy_spectral", "plasma", "terrain", "viridis"],
+    #                colorbar_label=["Illumination (%)", "PSR Regions", "Distance (meters)", "PEL Regions", "Distance (meters)", "Slope (degrees)", "Elevation (meters)"],
+    #                save_path=["output/illumination.png", "output/psr_regions.png", "output/distance_from_psr.png", "output/pel_regions.png", "output/distance_from_pel.png", "output/slope.png", "output/elevation.png"])
+
+
+    print("PSR Size Statistics:", PSR_size_stats)
+    print("PEL Size Statistics:", PEL_size_stats)
 
 main()

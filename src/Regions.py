@@ -47,6 +47,27 @@ def calculate_distance(labeled_array, units=1):
 
     return distance_array  # Return the distance array scaled by the specified units
 
+def region_sizes(labeled_array):
+    """
+    Calculates the area of each labeled region in the input array.
+
+    Parameters:
+    labeled_array (numpy.ndarray): The labeled array of regions.
+
+    Returns:
+    size_array (numpy.ndarray): An array containing the sizes of each labeled region.
+    size_stats (dict): A dictionary containing statistics about the sizes of the labeled regions.
+    """
+
+    size_array = np.bincount(labeled_array.flatten())[1:]  # Count the number of pixels in each labeled region not including the background (label 0)
+    size_stats = {
+        "total_regions": len(size_array),
+        "largest_region_size": np.max(size_array),
+        "smallest_region_size": np.min(size_array[size_array > 0]) if np.any(size_array > 0) else 0,
+        "mean_region_size": np.mean(size_array)
+    }
+    return size_array, size_stats  # Return the sizes of each labeled region and the statistics
+
 
 # Test functions
 if __name__ == "__main__":
