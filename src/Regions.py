@@ -1,4 +1,4 @@
-import numpy as np
+import numpy as np, pandas as pd
 from scipy import ndimage
 
 
@@ -68,6 +68,37 @@ def region_sizes(labeled_array):
     }
     return size_array, size_stats  # Return the sizes of each labeled region and the statistics
 
+def region_data(labeled_array, region_count, layers={}, values={}):
+    """
+    Creates a table containing each region with the corresponding data from the given layers.
+
+    Parameters:
+    labeled_array (numpy.ndarray): The labeled array of regions.
+    region_count (int): The number of labeled regions.
+    layers (dict of numpy.ndarray): The dictionary of layers (illumination, slope, elevation, size) that we compute the data from.
+    values (dict): The dictionary of values (size, etc.) that we get the data from.
+
+    Returns:
+    region_table (DataFrame): A DataFrame where rows represent regions and columns represent the data from each layer.
+    """
+
+    region_table = pd.DataFrame()
+    region_table["region_id"] = np.arange(1, region_count + 1)  # Create a column for region IDs
+
+    for layer_name, layer_data in layers.items():
+        if layer_data is None:
+            continue
+        else:
+            region_table[layer_name] = ndimage.mean(layer_data, labels=labeled_array, index=np.arange(1, region_count + 1))
+    for value_name, value_data in values.items():
+        if value_data is None:
+            continue
+        else:
+            region_table[value_name] = value_data
+
+    return region_table
+
+
 
 # Test functions
 if __name__ == "__main__":
@@ -78,12 +109,25 @@ if __name__ == "__main__":
                      [0, 0, 0, 0],
                      [3, 3, 3, 3]])
     threshold = 1
+    greater_than = True
 
     # Example output
-    labeled_regions, region_count = label_regions(data, threshold, False)
+    labeled_regions, region_count = label_regions(data, threshold, greater_than)
     print("Labeled Regions:\n", labeled_regions)
     print("Number of Regions:", region_count)
 
     distance = calculate_distance(labeled_regions)  # Example usage with the same labeled array
     print("Distances from labelled regions:\n", distance)
+
+    sizes, stats = region_sizes(labeled_regions)
+    print("Region Sizes:", sizes)
+    print("Region Size Statistics:", stats)
+
+    layer = np.array([[8, 10, 30, 0],
+                      [1, 28, 34, 12],
+                      [0, 13, 2, 0],
+                      [5, 1, 7, 9],
+                      [3, 100, 99, 39]])
     
+    region_data_dict = region_data(labeled_regions, region_count, layers={"illumination": layer, "elevation": layer, "slope": None}, values={"size": None})
+    print("Region Data:\n", region_data_dict)

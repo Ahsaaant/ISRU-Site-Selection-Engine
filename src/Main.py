@@ -30,8 +30,8 @@ def main():
     slope_data = fp.elevation_to_slope(elevation_data, pixel_size_x=pixel_size_x, pixel_size_y=pixel_size_y)
 
     # Label regions in the illumination data according to the PSR and PEL thresholds
-    PSR_regions, region_count = rg.label_regions(scaled_illumination_data, threshold=PSR_THRESHOLD, greater_than=False)
-    PEL_regions, region_count = rg.label_regions(scaled_illumination_data, threshold=PEL_THRESHOLD, greater_than=True)
+    PSR_regions, PSR_region_count = rg.label_regions(scaled_illumination_data, threshold=PSR_THRESHOLD, greater_than=False)
+    PEL_regions, PEL_region_count = rg.label_regions(scaled_illumination_data, threshold=PEL_THRESHOLD, greater_than=True)
 
     # Find the area of labelled regions
     PSR_region_sizes, PSR_size_stats = rg.region_sizes(PSR_regions)
@@ -41,15 +41,15 @@ def main():
     distance_from_PSR = rg.calculate_distance(PSR_regions, 60)
     distance_from_PEL = rg.calculate_distance(PEL_regions, 60)
 
+    PSR_region_data = rg.region_data(PSR_regions, PSR_region_count, layers={"illumination": scaled_illumination_data, "elevation": elevation_data, "slope": slope_data}, values={"size": PSR_region_sizes})
+    PEL_region_data = rg.region_data(PEL_regions, PEL_region_count, layers={"illumination": scaled_illumination_data, "elevation": elevation_data, "slope": slope_data}, values={"size": PEL_region_sizes})
+
+    print("PSR Region Data:\n", PSR_region_data)
     # Plot the results
     # fp.plot_layers(data=[scaled_illumination_data, PSR_regions, distance_from_PSR, PEL_regions, distance_from_PEL, slope_data, elevation_data],
     #                title=["Scaled Illumination", "Labeled Regions", "Distance from PSR", "Labeled Regions", "Distance from PEL", "Slope", "Elevation"],
     #                cmap=["gray", "nipy_spectral", "plasma", "nipy_spectral", "plasma", "terrain", "viridis"],
     #                colorbar_label=["Illumination (%)", "PSR Regions", "Distance (meters)", "PEL Regions", "Distance (meters)", "Slope (degrees)", "Elevation (meters)"],
     #                save_path=["output/illumination.png", "output/psr_regions.png", "output/distance_from_psr.png", "output/pel_regions.png", "output/distance_from_pel.png", "output/slope.png", "output/elevation.png"])
-
-
-    print("PSR Size Statistics:", PSR_size_stats)
-    print("PEL Size Statistics:", PEL_size_stats)
 
 main()
