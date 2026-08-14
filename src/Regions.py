@@ -129,5 +129,5 @@ if __name__ == "__main__":
                       [5, 1, 7, 9],
                       [3, 100, 99, 39]])
     
-    region_data_dict = region_data(labeled_regions, region_count, layers={"illumination": layer, "elevation": layer, "slope": None}, values={"size": None})
+    region_data_dict = region_data(labeled_regions, region_count, layers={"illumination (%)": layer, "elevation": layer, "slope": None}, values={"size": None})
     print("Region Data:\n", region_data_dict)
