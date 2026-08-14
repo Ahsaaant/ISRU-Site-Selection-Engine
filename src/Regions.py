@@ -96,9 +96,37 @@ def region_data(labeled_array, region_count, layers={}, values={}):
         else:
             region_table[value_name] = value_data
 
+    region_table.set_index("region_id", inplace=True)  # Set the region_id as the index of the DataFrame
+
     return region_table
 
+def filter_region_data(region_data, column, threshold, greater_than=True):
+    """
+    Filters the region data based on a specified column and threshold.
 
+    Parameters:
+    region_data (DataFrame): The DataFrame containing region data.
+    column (str): The column name to filter on.
+    threshold (float): The threshold value for filtering.
+    greater_than (bool, optional): Whether to filter for values greater than the threshold. Defaults to True.
+
+    Returns:
+    filtered_region_data (DataFrame): A DataFrame containing only the regions that meet the filtering criteria.
+    """
+
+    # Filter the region data based on the specified column and threshold
+    if greater_than and column in region_data.columns:
+        filtered_region_data = region_data[region_data[column] > threshold]
+        ommitted_regions = region_data[region_data[column] <= threshold]
+    elif not greater_than and column in region_data.columns:
+        filtered_region_data = region_data[region_data[column] < threshold]
+        ommitted_regions = region_data[region_data[column] >= threshold]
+    else:
+        print(f"Column '{column}' not found in region data. Returning original DataFrame.")
+        filtered_region_data = region_data  # If the column doesn't exist, return the original DataFrame
+        ommitted_regions = None  # Return None for omitted regions
+
+    return filtered_region_data, ommitted_regions  # Return the filtered DataFrame and the omitted regions
 
 # Test functions
 if __name__ == "__main__":
@@ -129,5 +157,9 @@ if __name__ == "__main__":
                       [5, 1, 7, 9],
                       [3, 100, 99, 39]])
     
-    region_data_dict = region_data(labeled_regions, region_count, layers={"illumination (%)": layer, "elevation": layer, "slope": None}, values={"size": None})
+    region_data_dict = region_data(labeled_regions, region_count, layers={"illumination (%)": layer, "elevation": layer, "slope": None}, values={"size": sizes})
     print("Region Data:\n", region_data_dict)
+
+    filtered_data, omitted_data = filter_region_data(region_data_dict, "size", 6, greater_than=True)
+    print("Filtered Region Data:\n", filtered_data)
+    print("Omitted Region Data:\n", omitted_data)
