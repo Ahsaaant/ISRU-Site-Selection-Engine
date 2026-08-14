@@ -68,7 +68,7 @@ def region_sizes(labeled_array):
     }
     return size_array, size_stats  # Return the sizes of each labeled region and the statistics
 
-def region_data(labeled_array, region_count, layers={}, values={}):
+def region_data(labeled_array, region_count, layers=None, values=None):
     """
     Creates a table containing each region with the corresponding data from the given layers.
 
@@ -85,14 +85,16 @@ def region_data(labeled_array, region_count, layers={}, values={}):
     region_table = pd.DataFrame()
     region_table["region_id"] = np.arange(1, region_count + 1)  # Create a column for region IDs
 
-    for layer_name, layer_data in layers.items():
-        if layer_data is None:
-            continue
-        else:
-            region_table[layer_name] = ndimage.mean(layer_data, labels=labeled_array, index=np.arange(1, region_count + 1))
-    for value_name, value_data in values.items():
-        if value_data is None:
-            continue
+    if layers is not None:
+        for layer_name, layer_data in layers.items():
+            if layer_data is None:
+                continue
+            else:
+                region_table[layer_name] = ndimage.mean(layer_data, labels=labeled_array, index=np.arange(1, region_count + 1))
+    if values is not None:
+        for value_name, value_data in values.items():
+            if value_data is None:
+                continue
         else:
             region_table[value_name] = value_data
 

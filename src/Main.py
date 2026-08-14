@@ -44,7 +44,13 @@ def main():
     PSR_region_data = rg.region_data(PSR_regions, PSR_region_count, layers={"illumination": scaled_illumination_data, "elevation": elevation_data, "slope": slope_data}, values={"size": PSR_region_sizes})
     PEL_region_data = rg.region_data(PEL_regions, PEL_region_count, layers={"illumination": scaled_illumination_data, "elevation": elevation_data, "slope": slope_data}, values={"size": PEL_region_sizes})
 
+    filtered_PSR_data, omitted_PSR_data = rg.filter_region_data(PSR_region_data, "size", 10, greater_than=True)
+    filtered_PEL_data, omitted_PEL_data = rg.filter_region_data(PEL_region_data, "size", 10, greater_than=True)
+
     print("PSR Region Data:\n", PSR_region_data)
+    print("Omitted PSR Region Data:\n", omitted_PSR_data)
+    print("PEL Region Data:\n", PEL_region_data)
+    print("Omitted PEL Region Data:\n", omitted_PEL_data)
     # Plot the results
     # fp.plot_layers(data=[scaled_illumination_data, PSR_regions, distance_from_PSR, PEL_regions, distance_from_PEL, slope_data, elevation_data],
     #                title=["Scaled Illumination", "Labeled Regions", "Distance from PSR", "Labeled Regions", "Distance from PEL", "Slope", "Elevation"],
