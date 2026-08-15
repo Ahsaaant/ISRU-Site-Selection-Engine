@@ -95,8 +95,8 @@ def region_data(labeled_array, region_count, layers=None, values=None):
         for value_name, value_data in values.items():
             if value_data is None:
                 continue
-        else:
-            region_table[value_name] = value_data
+            else:
+                region_table[value_name] = value_data
 
     region_table.set_index("region_id", inplace=True)  # Set the region_id as the index of the DataFrame
 

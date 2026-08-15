@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import FileProccesing as fp
+import FileProcessing as fp
 import Regions as rg
 
 # Constants for file paths
