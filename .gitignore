@@ -1,2 +1,5 @@
 # Ignore the data folder which contains the large data files and rasters.
 data/
+
+# Ignore the compiled Python files and cache directories.
+src/__pycache__/
