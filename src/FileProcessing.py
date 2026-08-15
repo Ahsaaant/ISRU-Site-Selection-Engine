@@ -118,7 +118,6 @@ def elevation_to_slope(elevation_data, pixel_size_x, pixel_size_y):
     
     return slope
 
-
 def plot_layers(data = [], title = [], cmap = [], colorbar_label = [], save_path = []):
     """
     Plots raster layers using matplotlib.

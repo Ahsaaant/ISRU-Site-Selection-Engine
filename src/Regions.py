@@ -1,24 +1,36 @@
 import numpy as np, pandas as pd
 from scipy import ndimage
 
+def validate_layers(layers):
+    """
+    Create a mask where every pixel that is not NaN in all layers is True, 
+    and every pixel that is NaN in any layer is False.
+    """
 
-def label_regions(data, threshold, greater_than=True):
+    valid_mask = np.ones_like(layers[0], dtype=bool)
+    for layer in layers:
+        valid_mask &= ~np.isnan(layer)
+    
+    return valid_mask
+
+def label_regions(data, valid_map, threshold, greater_than=True):
     """
     Labels connected regions in the data that are above a certain threshold.
 
     Parameters:
     data (numpy.ndarray): The input data array.
+    valid_map (numpy.ndarray): A boolean mask indicating valid pixels to include in regions.
     threshold (float): The threshold value to identify regions.
     greater_than (bool, optional): Whether to label regions greater than the threshold. Defaults to True.
 
     Returns:
     numpy.ndarray: An array with labeled regions.
     """
-    # Create a binary mask where values above or below the threshold are True
+    # Create a binary mask where values above or below the threshold are True and match the validity_mask
     if greater_than:
-        binary_mask = data >= threshold
+        binary_mask = valid_map & (data > threshold)
     else:
-        binary_mask = data <= threshold
+        binary_mask = valid_map & (data <= threshold)
 
     # Label connected regions in the binary mask using an 8-connectivity structure
     labeled_array, region_count = ndimage.label(binary_mask, structure=[[1,1,1], #type: ignore
@@ -136,13 +148,18 @@ if __name__ == "__main__":
     data = np.array([[0, 1, 2, 0],
                      [1, 2, 3, 1],
                      [0, 1, 2, 0],
-                     [0, 0, 0, 0],
+                     [np.nan, np.nan, np.nan, np.nan],
                      [3, 3, 3, 3]])
     threshold = 1
     greater_than = True
 
     # Example output
-    labeled_regions, region_count = label_regions(data, threshold, greater_than)
+
+    # Create a valid map based on the input data
+    valid_map = validate_layers([data])  
+    print("Valid Map:\n", valid_map)
+
+    labeled_regions, region_count = label_regions(data, valid_map, threshold, greater_than)
     print("Labeled Regions:\n", labeled_regions)
     print("Number of Regions:", region_count)
 
