@@ -11,6 +11,10 @@ ILLUMINATION_RASTER_PATH = "data/SunVisibility(abgvis_85S_060M_201608).tiff"
 # Constants for thresholds
 PSR_THRESHOLD = 0 # The threshold for permanently shdaowed regions
 PEL_THRESHOLD = 55 # The threshold for peaks of eternal light (percentage).
+REGION_SIZE_THRESHOLD = 10 # The minimum size (in pixels) of regions to be considered.
+
+# Constants for analysis
+PIXEL_SIZE = 60 # The size of each pixel in meters.
 
 def main():
     # Load the altitude and illumination raster data
@@ -41,14 +45,14 @@ def main():
     PEL_region_sizes, PEL_size_stats = rg.region_sizes(PEL_regions)
 
     # Calculate distances from labeled regions
-    distance_from_PSR = rg.calculate_distance(PSR_regions, 60)
-    distance_from_PEL = rg.calculate_distance(PEL_regions, 60)
+    distance_from_PSR = rg.calculate_distance(PSR_regions, PIXEL_SIZE)
+    distance_from_PEL = rg.calculate_distance(PEL_regions, PIXEL_SIZE)
 
     PSR_region_data = rg.region_data(PSR_regions, PSR_region_count, layers={"illumination": scaled_illumination_data, "elevation": elevation_data, "slope": slope_data}, values={"size": PSR_region_sizes})
     PEL_region_data = rg.region_data(PEL_regions, PEL_region_count, layers={"illumination": scaled_illumination_data, "elevation": elevation_data, "slope": slope_data}, values={"size": PEL_region_sizes})
 
-    filtered_PSR_data, omitted_PSR_data = rg.filter_region_data(PSR_region_data, "size", 10, greater_than=True)
-    filtered_PEL_data, omitted_PEL_data = rg.filter_region_data(PEL_region_data, "size", 10, greater_than=True)
+    filtered_PSR_data, omitted_PSR_data = rg.filter_region_data(PSR_region_data, "size", REGION_SIZE_THRESHOLD, greater_than=True)
+    filtered_PEL_data, omitted_PEL_data = rg.filter_region_data(PEL_region_data, "size", REGION_SIZE_THRESHOLD, greater_than=True)
 
     print("PSR Region Data:\n", filtered_PSR_data)
     print("Omitted PSR Region Data:\n", omitted_PSR_data)

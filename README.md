@@ -44,12 +44,13 @@ The pipeline in `src/Main.py` runs the following steps.
 
 ### Tunable Parameters
 
-| Parameter | Location | Current value | Meaning |
-| --- | --- | --- | --- |
-| `PSR_THRESHOLD` | `src/Main.py` | `0` | A pixel is part of a PSR at or below this illumination percentage. |
-| `PEL_THRESHOLD` | `src/Main.py` | `55` | A pixel is part of a PEL at or above this illumination percentage. |
-| Minimum region size | `src/Main.py`, `filter_region_data` call | `10` | Regions of 10 pixels or fewer are omitted. At 60 m/px, one pixel is 3,600 m². |
-| `ALTITUDE_OFFSET` | `src/FileProccesing.py` | `1737400` | LOLA reference sphere radius, in metres. |
+| Parameter               | Location                                 | Current value | Meaning                                                                        |
+| ----------------------- | ---------------------------------------- | ------------- | ------------------------------------------------------------------------------ |
+| `PSR_THRESHOLD`         | `src/Main.py`                            | `0`           | A pixel is part of a PSR at or below this illumination percentage.             |
+| `PEL_THRESHOLD`         | `src/Main.py`                            | `55`          | A pixel is part of a PEL at or above this illumination percentage.             |
+| `PIXEL_SIZE`            | `src/Main.py`                            | `60`          | The size of each pixel in terms of m²                                          |
+| `REGION_SIZE_THRESHOLD` | `src/Main.py`, `filter_region_data` call | `10`          | Regions of 10 pixels or fewer are omitted. At 60 m²/px, one pixel is 3,600 m². |
+| `ALTITUDE_OFFSET`       | `src/FileProccesing.py`                  | `1737400`     | LOLA reference sphere radius, in metres.                                       |
 
 ---
 
