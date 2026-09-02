@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 import FileProcessing as fp
 import Regions as rg
+import Analysis as an
 
 # Constants for file paths
 ALTITUDE_RASTER_PATH = "data/Altitude-rasterize.tif"
@@ -15,6 +16,7 @@ REGION_SIZE_THRESHOLD = 10 # The minimum size (in pixels) of regions to be consi
 
 # Constants for analysis
 PIXEL_SIZE = 60 # The size of each pixel in meters.
+FEASIBLE_DISTANCE = 70 # The maximum distance (in meters squared) between PSR and PEL regions to be considered as a pair.
 
 def main():
     # Load the altitude and illumination raster data
@@ -54,11 +56,9 @@ def main():
     filtered_PSR_data, omitted_PSR_data = rg.filter_region_data(PSR_region_data, "size", REGION_SIZE_THRESHOLD, greater_than=True)
     filtered_PEL_data, omitted_PEL_data = rg.filter_region_data(PEL_region_data, "size", REGION_SIZE_THRESHOLD, greater_than=True)
 
-    print("PSR Region Data:\n", filtered_PSR_data)
-    print("Omitted PSR Region Data:\n", omitted_PSR_data)
-    print("PEL Region Data:\n", filtered_PEL_data)
-    print("Omitted PEL Region Data:\n", omitted_PEL_data)
-
+    paired_data = an.pair_tables(filtered_PSR_data, PSR_regions, filtered_PEL_data, PEL_regions, feasible_distance=FEASIBLE_DISTANCE, pixel_size=PIXEL_SIZE)
+    print(paired_data)
+    
     # Plot the results
     fp.plot_layers(
         data=[elevation_data, scaled_illumination_data, slope_data, PSR_regions, PEL_regions, distance_from_PSR, distance_from_PEL],
