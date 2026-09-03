@@ -118,26 +118,46 @@ def elevation_to_slope(elevation_data, pixel_size_x, pixel_size_y):
     
     return slope
 
-def plot_layers(data = [], title = [], cmap = [], colorbar_label = [], save_path = []):
+def plot_layers(data=[], title=[], cmap=[], colorbar_label=[], save_path=[], show=False,
+                vmin=[], vmax=[]):
     """
-    Plots raster layers using matplotlib.
-    
+    Plots raster layers using matplotlib, and optionally writes them to disk.
+
     Parameters:
     data (list of np.ndarray): The raster data to be plotted.
     title (list of str): The titles of the plots.
     cmap (list of str): The colormaps to be used for the plots.
     colorbar_label (list of str): The labels for the colorbars.
+    save_path (list of str): Where to write each figure. An empty list writes nothing.
+    show (bool): Whether to open the figures interactively. Off by default so that a pipeline
+        run does not block waiting for windows to be closed.
+    vmin (list): Optional lower colour limits, one per layer.
+    vmax (list): Optional upper colour limits, one per layer.
     """
 
     for i in range(len(data)):
-        plt.figure(figsize=(10, 10))
-        plt.imshow(data[i], cmap=cmap[i])
+        figure = plt.figure(figsize=(10, 10))
+        image = plt.imshow(
+            data[i],
+            cmap=cmap[i],
+            vmin=vmin[i] if i < len(vmin) else None,
+            vmax=vmax[i] if i < len(vmax) else None,
+        )
         plt.title(title[i])
-        cbar = plt.colorbar()
-        cbar.set_label(colorbar_label[i])
-        # if save_path[i]:
-        #     plt.savefig(save_path[i], dpi=300, bbox_inches='tight')
-    plt.show()
+        plt.axis("off")
+        colorbar = plt.colorbar(image, fraction=0.046, pad=0.04)
+        colorbar.set_label(colorbar_label[i])
+
+        if i < len(save_path) and save_path[i]:
+            plt.savefig(save_path[i], dpi=150, bbox_inches="tight")
+            print(f"   wrote {save_path[i]}")
+
+        if not show:
+            plt.close(figure)
+
+    if show:
+        plt.show()
+
 
 # Test the functions
 if __name__ == "__main__":

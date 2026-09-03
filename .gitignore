@@ -3,3 +3,5 @@ data/
 
 # Ignore the compiled Python files and cache directories.
 src/__pycache__/
+# macOS folder metadata.
+.DS_Store
