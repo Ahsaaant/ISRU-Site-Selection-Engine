@@ -1,0 +1,104 @@
+{
+  "parameters": {
+    "PSR_THRESHOLD": 0,
+    "PEL_THRESHOLD": 55,
+    "REGION_SIZE_THRESHOLD": 10,
+    "MAX_PEL_SLOPE": 15,
+    "MIN_PSR_AREA": 1.0,
+    "PIXEL_SIZE": 60,
+    "FEASIBLE_DISTANCE": 2000,
+    "weights": {
+      "distance": 0.35,
+      "illumination": 0.3,
+      "area": 0.2,
+      "slope": 0.15
+    }
+  },
+  "constraints": {
+    "PSR_before": 5303,
+    "PSR_after": 481,
+    "PSR_rejected_area": 4822,
+    "PEL_before": 131,
+    "PEL_after": 131,
+    "PEL_rejected_slope": 0,
+    "max_PEL_slope": 15,
+    "min_PSR_area": 1.0
+  },
+  "tiers": {
+    "walkback_2km": {
+      "sites": 10,
+      "distinct_PSR": 5,
+      "distinct_PEL": 10,
+      "top_site": "PSR_24969 to PEL_852"
+    },
+    "rover_5km": {
+      "sites": 77,
+      "distinct_PSR": 27,
+      "distinct_PEL": 61,
+      "top_site": "PSR_24969 to PEL_840"
+    },
+    "cable_10km": {
+      "sites": 246,
+      "distinct_PSR": 60,
+      "distinct_PEL": 117,
+      "top_site": "PSR_24969 to PEL_840"
+    }
+  },
+  "validation": {
+    "cold_traps_located": "6/6",
+    "slope_comparison": {
+      "pixels_compared": 25552899,
+      "gradient_mean": 9.632229525820996,
+      "horn_mean": 9.579953650427031,
+      "gradient_max": 54.25216293334961,
+      "horn_max": 50.26065014048503,
+      "mean_absolute_difference": 0.257326416001145,
+      "median_absolute_difference": 0.18471206717061328,
+      "p95_absolute_difference": 0.7326956968920169,
+      "max_absolute_difference": 15.642234078146506,
+      "correlation": 0.9983144555726702
+    },
+    "pairing_sanity": {
+      "row_count": true,
+      "distinct_distances": true,
+      "distance_within_bounds": true
+    },
+    "psr_extent": {
+      "psr_pixels": 2744581,
+      "psr_area_km2": 9880.4916,
+      "valid_pixels": 25563102,
+      "valid_area_km2": 92027.1672,
+      "shadowed_fraction": 0.10736494342509763
+    }
+  },
+  "corner_weightings": {
+    "distance": [
+      "PSR_24969 to PEL_852",
+      "PSR_25131 to PEL_808",
+      "PSR_27173 to PEL_897",
+      "PSR_43063 to PEL_1635",
+      "PSR_24969 to PEL_985"
+    ],
+    "illumination": [
+      "PSR_24969 to PEL_1001",
+      "PSR_24969 to PEL_985",
+      "PSR_25131 to PEL_808",
+      "PSR_27173 to PEL_897",
+      "PSR_24969 to PEL_852"
+    ],
+    "area": [
+      "PSR_24969 to PEL_1001",
+      "PSR_24969 to PEL_985",
+      "PSR_24969 to PEL_852",
+      "PSR_24969 to PEL_1044",
+      "PSR_24969 to PEL_1039"
+    ],
+    "slope": [
+      "PSR_36252 to PEL_1266",
+      "PSR_24969 to PEL_1044",
+      "PSR_36252 to PEL_1291",
+      "PSR_43063 to PEL_1635",
+      "PSR_24969 to PEL_1001"
+    ]
+  }
+}
