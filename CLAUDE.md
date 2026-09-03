@@ -14,9 +14,10 @@ together. Site selection is therefore a proximity problem.
 Phase 0 (data acquisition and alignment): complete.
 Phase 1 (elevation, slope, illumination, PSR/HLR masks): complete.
 Phase 2 (label regions, sizes, per-region tables, distance transforms): complete.
-Phase 3 (pairing table, scoring rubric, ranking): pairing function written and passing on test
-data, not yet run on the real rasters. Scoring not started.
-Phase 4 (write-up): not started.
+Phase 3 (pairing table, scoring rubric, ranking): complete. Pairing, hard constraints,
+normalised weighted scoring, three distance tiers, and a weight sensitivity sweep all run on
+the real rasters. Outputs in `output/`.
+Phase 4 (write-up): complete. `docs/WRITEUP.md`.
 
 Rule: no phase begins until the previous one is committed and pushed.
 
@@ -24,13 +25,17 @@ Rule: no phase begins until the previous one is committed and pushed.
 
 ```
 src/Main.py             orchestration; runs the pipeline
-src/FileProccesing.py   raster I/O, resampling, slope, illumination scaling, plotting
+src/FileProcessing.py   raster I/O, resampling, slope, illumination scaling, plotting
 src/Regions.py          validity mask, region labelling, sizes, per-region tables, distance maps
-src/Analysis.py         pairing table; will hold scoring
+src/Analysis.py         pairing table, hard constraints, scoring, ranking, sensitivity
+src/Validation.py       Horn slope, crater geolocation, pairing sanity checks
 data/                   gitignored — rasters are hundreds of MB to GB
+output/                 tracked — figures, tables, summary.json from the last full run
+docs/WRITEUP.md         the write-up
 ```
 
-Note the existing spelling of `FileProccesing.py` — keep it consistent or rename everywhere.
+The file is `FileProcessing.py`, one `c`. Earlier notes spelled it `FileProccesing.py`; that
+rename is done and the old spelling survives only in stale references.
 
 ## Data
 
@@ -45,15 +50,16 @@ visible. Use the **GeoTIFF**, not the raw IMG.
 does **not** read the raw download: it reads `Altitude-rasterize.tif`, a QGIS-processed version
 converted from km to m. Raw values are radius against a 1737.4 km reference sphere.
 
-## Known live bug — resolve before scoring
+## Resolved: the illumination scale confusion
 
-`scaled_illumination_data.max()` returns **~0.88 (a 0–1 fraction)**, but `PEL_THRESHOLD` in
-Main.py is **55**, and the PEL region table shows mean illumination values around 55. These are
-inconsistent — a threshold of 55 against 0–1 data should select nothing, yet regions are being
-found. Something is scaling twice, or scaling at the wrong point in the pipeline. Trace it before
-building any scoring on the illumination column. Evidence from the histogram work (all in
-fractions): max 0.88, 99th percentile of lit pixels ~0.48, broad plateau to ~0.45 then a sharp
-decline, only 19 pixels above 0.8.
+Previously recorded as a live bug: `scaled_illumination_data.max()` returning ~0.88 against a
+`PEL_THRESHOLD` of 55. There was no double scaling. `scale_illumination_data` multiplies by the
+raster scale factor **and by 100**, so the array is a percentage, 0 to 88.44, and a threshold of
+55 is consistent with it. The 0.88 figure came from histogram work done before the `* 100`
+existed. The note described an older state of the code, not the code.
+
+The lesson worth keeping: when a recorded symptom stops reproducing, the note is a suspect
+too. Check the code before trusting the file that describes it.
 
 ## Gotchas — each of these cost an evening
 
@@ -113,13 +119,37 @@ masks *before* labelling, so no region can exist where any layer lacks data. Wit
 regions produce NaN means that survive into the table and would propagate to NaN scores.
 
 **Verify every raster on load.** Print band min/max and check plausibility before anything else.
-Elevation in metres: roughly -5500 to 7000. Illumination: 0 to ~0.88. Slope: 0 to ~50 degrees. A
+Elevation in metres: roughly -5500 to 7000. Illumination as a percentage: 0 to 88.44. Slope: 0
+to ~54 degrees. A
 boolean mask: only True/False. This project has repeatedly had files whose names did not match
 their contents; the value range is the check that catches it.
 
 **No Python loops over rasters.** 25.6 million pixels. Vectorised numpy only. A comparison like
 `data > threshold` already returns a boolean array — no `np.where(..., True, False)` wrapper. A
 loop over ~150 regions is fine; a loop over pixels is not.
+
+**Illumination nodata is an integer sentinel, not NaN.** The illumination GeoTIFF is `int16`
+with nodata `-32768`. `read_raster` does not convert it, so `validate_layers`, which tests
+`~np.isnan(...)`, cannot see it — an int-derived array is never NaN. Scaled, the sentinel would
+become -131.07 and pass `data <= PSR_THRESHOLD`, making every nodata pixel eligible as a PSR.
+**This product happens to contain zero nodata pixels, so nothing is currently wrong.** It is a
+trap for any future illumination raster that does have them.
+
+**Float precision at the threshold boundary.** Computing the illumination percentage in float32
+rather than float64 changes the PEL count from 1890 to 1886, because four regions sit within
+rounding distance of the 55% cut. Main.py's path is float64. The sensitivity is not a bug; it is
+what thresholding a continuum with no natural break looks like from close up.
+
+**distance_transform_edt returns quantised distances.** On a regular grid, results are
+`pixel_size * sqrt(integer)`. Exact ties between different regions are therefore common and are
+*not* evidence of a stale mask. The real failure signature is one PSR showing the *same*
+distance to *every* PEL it pairs with.
+
+**Shackleton cannot be located by its catalogued centre.** Its cited centre, 89.9 S 0.0 E, lies
+about 3 km from the pole, where a fraction of a degree of longitude swings the point across the
+whole crater. A strict point-in-mask test fails there for reasons unrelated to the mask. In this
+data Shackleton's floor centre is ~10 km from the pole, which is why the pole sits on its rim.
+Match near-pole features by proximity to the largest nearby region, not by point containment.
 
 **Suppressed warning.** rasterio 1.5.0 triggers a NumPy 2.5 shape deprecation in `.scales`.
 Harmless, suppressed by message match. Do not broaden to the whole DeprecationWarning category.
@@ -154,30 +184,65 @@ joined back by ID — do not denormalise.
 invent illumination values and manufacture apparent precision. Analysis is capped at 60 m by the
 illumination product regardless.
 
+**Hard constraints: PEL mean slope <= 15 degrees, PSR area >= 1 km².** Applied before scoring,
+not as score penalties, so a disqualified region cannot be carried up the ranking by a strong
+showing elsewhere. The slope limit currently rejects nothing — all 131 PELs are under 10 degrees
+mean slope — which is itself informative: at 60 m resolution a ridge crest averages gentle.
+
+**Slope measurement point: mean over the whole region.** Answers "is this region buildable",
+matches the region table already built, and pairs with the slope hard constraint. Route slope
+between paired regions would answer a different question and is not implemented.
+
+**Scoring weights: distance 0.35, illumination 0.30, PSR area 0.20, slope 0.15.** Parameters
+with defaults, renormalised to sum to 1. Reported alongside a 2000-draw Dirichlet sensitivity
+sweep and four corner weightings, because whether the ranking survives reweighting matters more
+than the ranking.
+
+**Three distance tiers, not one.** 2 km walkback is the headline; 5 km (pressurised rover) and
+10 km (power cable to a remote extraction site) are reported alongside. The 2 km limit is a
+property of one mission architecture, not of the terrain, and running all three makes the
+architecture assumption visible instead of baked in.
+
 **Derive the PSR mask from illumination (`== 0`) rather than downloading LPSR.** This is the
 method used in the literature. The published LPSR product is kept for validation.
 
 ## Open questions
 
-**Scoring weights.** Factors: distance, illumination quality of the paired PEL, slope, PSR area.
-Wildly different units — must be normalised to 0–1 before any weighted sum, and inverted where
-lower is better, or distance in metres swamps everything. Weights should be parameters with
-defaults so sensitivity can be tested. If the top site flips when a weight is nudged, that is
-itself a finding; if the same sites stay on top across weightings, that is robustness and a
-stronger claim than the ranking.
+**Accessibility surface.** Still open. An alternative to discrete pairing: combine
+distance-to-nearest-PSR and distance-to-nearest-PEL per pixel (max of the two, probably, rather
+than sum) for a continuous surface. Complements the pairing table rather than replacing it. Both
+distance maps are already computed and written to `output/figures/`.
 
-**Hard constraints vs soft scores.** Slope above some angle and area below some minimum may
-disqualify a site outright rather than lowering its score. Filter first, score survivors.
+**Whether 55% is the right PEL threshold.** Defensible but not derived. See the percolation
+finding below: the choice is constrained from below by percolation and from above by running out
+of candidates, and 55% sits in a fairly narrow usable band rather than at a natural break.
 
-**Slope measurement point.** Currently mean slope across the whole region. Alternatives: slope at
-the centroid, or mean slope along the route between paired regions. Each answers a different
-question and the choice is unrecorded.
-
-**Accessibility surface.** An alternative to discrete pairing: combine distance-to-nearest-PSR and
-distance-to-nearest-PEL per pixel (max of the two, probably, rather than sum) for a continuous
-surface. Complements the pairing table rather than replacing it.
+**Resolved:** scoring weights, hard constraints, and slope measurement point are now recorded
+under Settled decisions.
 
 ## Findings so far
+
+**Co-location is rare, and that is the project's main result.** Only 63 of 5,303 PSRs above
+10 px — 1.2% — have any PEL within 2 km. The median PSR sits 28.9 km from the nearest PEL. Of
+the 481 PSRs above 1 km², five have a PEL within 2 km and none within 1 km. The premise that
+ice and power are mutually exclusive by location holds much more strongly than expected; the
+scarcity is the finding, not an obstacle to it.
+
+**The PEL class only exists above about 50% illumination.** Below that the lit ridge network
+percolates: thresholding at 45% gives a largest connected region of 503 km², and at 40% of
+4,066 km². Above 50% the regions are discrete peaks — 4.5 km² largest at 50%, 0.36 km² at 55%.
+So the threshold is bounded below by percolation and above by scarcity: 60% leaves 34 candidate
+regions and 70% leaves one. The usable band is narrow.
+
+**The ranking is robust to reweighting.** Across 2,000 random weightings, the top three sites
+are all pairings of PSR 24969, the Shackleton complex, appearing in the top five 85-87% of the
+time. Three of the four corner weightings put a PSR 24969 pairing first. The exception is
+slope-dominant, which surfaces a flatter but far smaller cold trap.
+
+**Validation passed on every check run.** Six catalogued cold traps — Shackleton, de Gerlache,
+Shoemaker, Haworth, Faustini, Sverdrup — all land on large PSRs. The np.gradient slope layer
+correlates 0.9983 with Horn's method with a mean absolute difference of 0.257 degrees. Derived
+PSR extent is 9,880 km², 10.74% of the mapped area.
 
 Polar illumination is a continuum, not cleanly bimodal — 18 million pixels sit in the "gap" that
 looks empty on a linear histogram. Ground-level illumination maxes at ~0.88, below the 0.9+ implied
@@ -185,18 +250,20 @@ by "peaks of eternal light" language; those figures generally refer to specific 
 modelled above ground level, at finer resolution. Genuinely well-lit terrain at ground level is
 scarce — at a 0.75 threshold the largest contiguous lit region was 7 pixels.
 
-## Validation still to do
+## Validation done, and still outstanding
 
-Compare the derived PSR mask against the published LOLA LPSR product and quantify agreement.
-Compare derived slope against QGIS `Raster > Analysis > Slope` on the same DEM. When ranking runs,
-Shackleton's rim-to-floor pairing should score highly — the literature places peaks of near-eternal
-light on its western rim, so it is the textbook case and a good ground truth.
+**Done.** Six catalogued south polar craters located in the derived PSR mask, by proximity to
+the largest nearby region (`Validation.check_known_cold_traps`). An east-positive longitude
+control run confirmed the projection convention: mirrored, only one of six lands on a PSR.
+Slope validated against Horn's method rather than QGIS — same algorithm GDAL and QGIS use, run
+in-process, so no manual export step. Horn also checked against an analytic cone. The pairing
+sanity checks CLAUDE.md specifies all pass on real data, and the distinct-distance check was
+confirmed to fail on a deliberately broken example, so it can detect what it is there to detect.
+Shackleton's rim-to-floor pairing ranks first, as the literature predicts.
 
-Immediate checks when the pairing table first runs on real data: a PSR appearing with two PELs must
-show two *different* distances (identical means the mask isn't updating); row count should be
-neither near-zero nor tens of thousands; and one pairing should be spot-checked against the plotted
-maps by eye. If very few PSRs have any PEL within 2 km, that challenges the project's core premise
-and needs investigating before scoring.
+**Still outstanding.** The derived PSR mask has not been compared against the published LOLA
+LPSR product — that product is not held locally. Derived extent is 9,880 km² over 85 S to the
+pole, which is the number to compare when LPSR is obtained.
 
 ## Known limitations to state in the write-up
 
@@ -205,7 +272,9 @@ shadow indicates where ice *can* survive, not that ice is present — that requi
 Diviner temperature data. Slope is undirected (a crater rim and a conical peak of equal steepness
 are indistinguishable); basin-versus-peak comes from elevation. Distances are straight-line and
 ignore terrain, so real traverse cost is higher — this matters especially given the threshold
-models crew walkback. Illumination is ground-level and time-averaged over a lunar precession cycle.
+models crew walkback. Illumination is ground-level and time-averaged over a lunar precession cycle. Scores are
+comparative within this candidate set only — a 0.68 is the best of ten, not an absolute rating.
+The headline tier rests on five distinct cold traps, so the ranking is short by nature.
 
 ## Working preferences
 
