@@ -386,3 +386,6 @@ valuable real estate on the Moon.
 
 *Analysis: LOLA `AVGVISIB_85S_060M_201608` and `LDEM_85S_10M_FLOAT`, 60 m grid, 85°S to the pole.
 Figures and tables in `output/`. Reproduce with `python src/Main.py`.*
+
+*A formatted version of this write-up, with interactive charts, is published at*
+*<https://claude.ai/code/artifact/b4134845-6562-4812-bc3a-7e759265ddc7> (private until shared).*
