@@ -16,7 +16,7 @@ REGION_SIZE_THRESHOLD = 10 # The minimum size (in pixels) of regions to be consi
 
 # Constants for analysis
 PIXEL_SIZE = 60 # The size of each pixel in meters.
-FEASIBLE_DISTANCE = 70 # The maximum distance (in meters squared) between PSR and PEL regions to be considered as a pair.
+FEASIBLE_DISTANCE = 2000 # The maximum distance (in meters) between PSR and PEL regions to be considered as a pair.
 
 def main():
     # Load the altitude and illumination raster data
