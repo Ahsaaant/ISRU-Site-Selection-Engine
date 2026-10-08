@@ -114,7 +114,7 @@ def region_data(labeled_array, region_count, layers=None, values=None):
 
     return region_table
 
-def filter_region_data(region_data, column, threshold, greater_than=True):
+def filter_region_data(region_data, column, threshold, greater_than=True, PSR_or_PEL=None):
     """
     Filters the region data based on a specified column and threshold.
 
@@ -139,6 +139,9 @@ def filter_region_data(region_data, column, threshold, greater_than=True):
         print(f"Column '{column}' not found in region data. Returning original DataFrame.")
         filtered_region_data = region_data  # If the column doesn't exist, return the original DataFrame
         ommitted_regions = None  # Return None for omitted regions
+
+    if PSR_or_PEL == "PSR_" or PSR_or_PEL == "PEL_":
+        filtered_region_data = filtered_region_data.add_prefix(PSR_or_PEL)  # Add a prefix to the filtered DataFrame columns for clarity
 
     return filtered_region_data, ommitted_regions  # Return the filtered DataFrame and the omitted regions
 
@@ -179,6 +182,8 @@ if __name__ == "__main__":
     region_data_dict = region_data(labeled_regions, region_count, layers={"illumination (%)": layer, "elevation": layer, "slope": None}, values={"size": sizes})
     print("Region Data:\n", region_data_dict)
 
-    filtered_data, omitted_data = filter_region_data(region_data_dict, "size", 6, greater_than=True)
+
+    filtered_data, omitted_data = filter_region_data(region_data_dict, "size", 1, greater_than=True, PSR_or_PEL="PSR_")
     print("Filtered Region Data:\n", filtered_data)
     print("Omitted Region Data:\n", omitted_data)
+    print(filtered_data.columns)
