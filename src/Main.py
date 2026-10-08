@@ -66,7 +66,7 @@ def main():
 
     # Pair the PSR's and PEL's based on th1eir region IDs and the distance between them
     paired_data = an.pair_tables(slope_filtered_PSR_data, PSR_regions, slope_filtered_PEL_data, PEL_regions, feasible_distance=FEASIBLE_DISTANCE, pixel_size=PIXEL_SIZE)
-    scored_data = an.score_pairs(paired_data)
+    scored_data = an.score_pairs(paired_data, distance_weight=0.5, illumination_weight=2, size_weight=1)
     print(scored_data)
     
     # Plot the results

@@ -37,7 +37,7 @@ def pair_tables(PSR_Table, PSR_Array, PEL_Table, PEL_Array, feasible_distance, p
 
     return paired_table
 
-def score_pairs(paired_table, distance_weight=1, illumination_weight=1, size_weight=1):
+def score_pairs(paired_table, distance_weight=1.0, illumination_weight=1.0, size_weight=1.0):
     """
     Scores the paired PSR and PEL regions based on their distance, PEL illumination, and PSR size.
 
@@ -48,8 +48,11 @@ def score_pairs(paired_table, distance_weight=1, illumination_weight=1, size_wei
     pd.DataFrame: A new DataFrame containing the scored pairs and ranked from best to worst.
     """
 
+    # Normalize illumination values to match the magnitude of the size values.
+    ILLUMINATION_BALANCE = 5
+
     # Calculate the score for each pair based on distance, PEL illumination, and PSR size.
-    paired_table["score"] = (distance_weight * (1 / (paired_table["distance"] + 1))) + (illumination_weight * paired_table["PEL_illumination"]) + (size_weight * paired_table["PSR_size"])
+    paired_table["score"] = (distance_weight * (1 / (paired_table["distance"] + 1))) + (illumination_weight * ILLUMINATION_BALANCE * paired_table["PEL_illumination"]) + (size_weight * paired_table["PSR_size"])
     
     # Rank the pairs from best to worst based on their score.
     paired_table = paired_table.sort_values("score", ascending=False)
