@@ -37,6 +37,28 @@ def pair_tables(PSR_Table, PSR_Array, PEL_Table, PEL_Array, feasible_distance, p
 
     return paired_table
 
+def _normalise(values, low, high):
+    """
+    Min-max normalises a series of values to a 0-1 range against the given bounds.
+
+    Parameters:
+    values (pd.Series): The values to normalise.
+    low (float): The value that maps to 0.
+    high (float): The value that maps to 1.
+
+    Returns:
+    pd.Series: The normalised values, or a constant 0.5 where the bounds are equal.
+    """
+
+    span = high - low
+
+    # With no spread there is nothing to rank on, so every pair scores the same.
+    # The constant is arbitrary and does not affect the ordering.
+    if span == 0:
+        return pd.Series(0.5, index=values.index)
+
+    return (values - low) / span
+
 def score_pairs(paired_table, distance_weight=1.0, illumination_weight=1.0, size_weight=1.0, illumination_threshold=55, feasible_distance=2000):
     """
     Scores the paired PSR and PEL regions based on their distance, PEL illumination, and PSR size.
@@ -47,18 +69,24 @@ def score_pairs(paired_table, distance_weight=1.0, illumination_weight=1.0, size
     Returns:
     pd.DataFrame: A new DataFrame containing the scored pairs and ranked from best to worst.
     """
-    illumination_score = (paired_table["PEL_illumination"] - illumination_threshold) / (paired_table["PEL_illumination"].max() - illumination_threshold)
+    illumination_score = _normalise(paired_table["PEL_illumination"], illumination_threshold, paired_table["PEL_illumination"].max())
     distance_score = 1 - (paired_table["distance"] / feasible_distance)
     log_size = np.log(paired_table["PSR_size"])
-    size_score = (log_size - log_size.min()) / (log_size.max() - log_size.min())
+    size_score = _normalise(log_size, log_size.min(), log_size.max())
 
     # Segmented scores for further analysis
     paired_table["distance_score"] = distance_score
     paired_table["illumination_score"] = illumination_score
     paired_table["size_score"] = size_score
     
-    # Calculate the score for each pair based on distance, PEL illumination, and PSR size.
-    paired_table["score"] = ((distance_weight * distance_score) + (illumination_weight * illumination_score) + (size_weight * size_score)) / 3
+    # Calculate the score for each pair as a weighted mean of the three factors.
+    # Dividing by the sum of the weights (not by 3) keeps the score on a 0-1 scale
+    # and comparable between different weightings.
+    total_weight = distance_weight + illumination_weight + size_weight
+    if total_weight == 0:
+        raise ValueError("At least one of distance_weight, illumination_weight or size_weight must be non-zero.")
+
+    paired_table["score"] = ((distance_weight * distance_score) + (illumination_weight * illumination_score) + (size_weight * size_score)) / total_weight
     
     # Rank the pairs from best to worst based on their score.
     paired_table = paired_table.sort_values("score", ascending=False)
