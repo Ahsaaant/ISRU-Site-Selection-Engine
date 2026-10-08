@@ -37,7 +37,7 @@ def pair_tables(PSR_Table, PSR_Array, PEL_Table, PEL_Array, feasible_distance, p
 
     return paired_table
 
-def score_pairs(paired_table, distance_weight=1.0, illumination_weight=1.0, size_weight=1.0):
+def score_pairs(paired_table, distance_weight=1.0, illumination_weight=1.0, size_weight=1.0, illumination_threshold=55, feasible_distance=2000):
     """
     Scores the paired PSR and PEL regions based on their distance, PEL illumination, and PSR size.
 
@@ -47,12 +47,17 @@ def score_pairs(paired_table, distance_weight=1.0, illumination_weight=1.0, size
     Returns:
     pd.DataFrame: A new DataFrame containing the scored pairs and ranked from best to worst.
     """
+    illumination_score = (paired_table["PEL_illumination"] - illumination_threshold) / (paired_table["PEL_illumination"].max() - illumination_threshold)
+    distance_score = 1 - (paired_table["distance"] / feasible_distance)
+    log_size = np.log(paired_table["PSR_size"])
+    size_score = (log_size - log_size.min()) / (log_size.max() - log_size.min())
 
-    # Normalize illumination values to match the magnitude of the size values.
-    ILLUMINATION_BALANCE = 5
-
+    # debug scores
+    paired_table["distance_score"] = distance_score
+    paired_table["illumination_score"] = illumination_score
+    paired_table["size_score"] = size_score
     # Calculate the score for each pair based on distance, PEL illumination, and PSR size.
-    paired_table["score"] = (distance_weight * (1 / (paired_table["distance"] + 1))) + (illumination_weight * ILLUMINATION_BALANCE * paired_table["PEL_illumination"]) + (size_weight * paired_table["PSR_size"])
+    paired_table["score"] = ((distance_weight * distance_score) + (illumination_weight * illumination_score) + (size_weight * size_score)) / 3
     
     # Rank the pairs from best to worst based on their score.
     paired_table = paired_table.sort_values("score", ascending=False)
@@ -89,3 +94,4 @@ if __name__ == "__main__":
     example_distance = 70
 
     print(pair_tables(Example_PSR_Table, Example_PSR_Array, Example_PEL_Table, Example_PEL_Array, example_distance))
+    print(score_pairs(pair_tables(Example_PSR_Table, Example_PSR_Array, Example_PEL_Table, Example_PEL_Array, example_distance), distance_weight=0.5, illumination_weight=2, size_weight=1, illumination_threshold=55))

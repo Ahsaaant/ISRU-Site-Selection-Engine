@@ -77,4 +77,5 @@ def main():
     #     colorbar_label=["Elevation (m)", "Illumination (%)", "Slope (degrees)", "Region Labels", "Region Labels", "Distance (pixels)", "Distance (pixels)"]
     # )
 
-main()
+if __name__ == "__main__":
+    main()
