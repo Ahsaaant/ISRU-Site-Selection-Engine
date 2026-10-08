@@ -52,10 +52,11 @@ def score_pairs(paired_table, distance_weight=1.0, illumination_weight=1.0, size
     log_size = np.log(paired_table["PSR_size"])
     size_score = (log_size - log_size.min()) / (log_size.max() - log_size.min())
 
-    # debug scores
+    # Segmented scores for further analysis
     paired_table["distance_score"] = distance_score
     paired_table["illumination_score"] = illumination_score
     paired_table["size_score"] = size_score
+    
     # Calculate the score for each pair based on distance, PEL illumination, and PSR size.
     paired_table["score"] = ((distance_weight * distance_score) + (illumination_weight * illumination_score) + (size_weight * size_score)) / 3
     
