@@ -52,7 +52,10 @@ The pipeline in `src/Main.py` runs the following steps.
 | `REGION_SIZE_THRESHOLD`       | `src/Main.py`           | `10`          | Regions of 10 pixels or fewer are omitted. At 60 m²/px, one pixel is 3,600 m².                                                                |
 | `FEASIBLE_DISTANCE_THRESHOLD` | `src/Main.py`           | `2000`        | The radial limit for astronauts without a rover from **[THIS PAPER](https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2025JE009434)** in m. |
 | `ALTITUDE_OFFSET`             | `src/FileProccesing.py` | `1737400`     | LOLA reference sphere radius, in metres.                                                                                                      |
-| `SLOPE_THRESHOLD`             | `src/Main.py`,          | `10`          | The maximum slope within a region to be considered, in degrees.                                                                               |
+| `SLOPE_THRESHOLD`             | `src/Main.py`           | `10`          | The maximum slope within a region to be considered, in degrees.                                                                               |
+| `DISTANCE_WEIGHT`             | `src/Main.py`           | `1.0`         | The weight that distance holds in relation to the final pair scoring.                                                                         |
+| `ILLUMINATION_WEIGHT`         | `src/Main.py`           | `1.0`         | The weight that PEL illumination holds in relation to the final pair scoring.                                                                 |
+| `SIZE_WEIGHT`                 | `src/Main.py`           | `1.0`         | The weight that PSR size holds in relation to the final pair scoring.                                                                         |
 
 ---
 

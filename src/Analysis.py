@@ -74,22 +74,35 @@ def score_pairs(paired_table, distance_weight=1.0, illumination_weight=1.0, size
     log_size = np.log(paired_table["PSR_size"])
     size_score = _normalise(log_size, log_size.min(), log_size.max())
 
-    # Segmented scores for further analysis
-    paired_table["distance_score"] = distance_score
-    paired_table["illumination_score"] = illumination_score
-    paired_table["size_score"] = size_score
-    
-    # Calculate the score for each pair as a weighted mean of the three factors.
-    # Dividing by the sum of the weights (not by 3) keeps the score on a 0-1 scale
-    # and comparable between different weightings.
     total_weight = distance_weight + illumination_weight + size_weight
-    if total_weight == 0:
-        raise ValueError("At least one of distance_weight, illumination_weight or size_weight must be non-zero.")
 
-    paired_table["score"] = ((distance_weight * distance_score) + (illumination_weight * illumination_score) + (size_weight * size_score)) / total_weight
-    
+    # Segmented scores for further analysis
+    weighted_scores = {
+        "distance": (distance_weight * distance_score),
+        "illumination": (illumination_weight * illumination_score),
+        "size": (size_weight * size_score),
+        "total": (
+            (distance_weight * distance_score) + 
+            (illumination_weight * illumination_score) + 
+            (size_weight * size_score)
+                ) / total_weight
+    }
+
+    # Scores added to the paired table
+    paired_table["distance_score"] = weighted_scores["distance"]
+    paired_table["illumination_score"] = weighted_scores["illumination"]
+    paired_table["size_score"] = weighted_scores["size"]
+    paired_table["total_score"] = (weighted_scores["total"])
+
+    # Percent of each score
+    paired_table["distance_percent (%)"] = (weighted_scores["distance"] / (paired_table["total_score"] * total_weight)) * 100
+    paired_table["illumination_percent (%)"] = (weighted_scores["illumination"] / (paired_table["total_score"] * total_weight)) * 100
+    paired_table["size_percent (%)"] = (weighted_scores["size"] / (paired_table["total_score"] * total_weight)) * 100
+
+    # Clean up the table 
+    paired_table = paired_table.drop(columns=["PEL_ID", "PSR_ID"])
     # Rank the pairs from best to worst based on their score.
-    paired_table = paired_table.sort_values("score", ascending=False)
+    paired_table = paired_table.sort_values("total_score", ascending=False)
     return paired_table
 
 if __name__ == "__main__":
@@ -122,5 +135,4 @@ if __name__ == "__main__":
 
     example_distance = 70
 
-    print(pair_tables(Example_PSR_Table, Example_PSR_Array, Example_PEL_Table, Example_PEL_Array, example_distance))
-    print(score_pairs(pair_tables(Example_PSR_Table, Example_PSR_Array, Example_PEL_Table, Example_PEL_Array, example_distance), distance_weight=0.5, illumination_weight=2, size_weight=1, illumination_threshold=55))
+    print(score_pairs(pair_tables(Example_PSR_Table, Example_PSR_Array, Example_PEL_Table, Example_PEL_Array, example_distance), distance_weight=0.5, illumination_weight=2, size_weight=1, illumination_threshold=55, feasible_distance=example_distance))
