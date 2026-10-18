@@ -84,11 +84,9 @@ def main():
     )
 
     # Plot the scored data
-    dp.plot_graph(
-        data=[(scored_data["distance"], scored_data["total_score"])],
-        titles=["Scored Data"],
-        x_labels=["Distance (pixels)"],
-        y_labels=["Total Score"],
+    dp.plot(
+        table=scored_data,
+        title="Scored Data",
         save_path="output/plots/scored_data.png"
     )
 
