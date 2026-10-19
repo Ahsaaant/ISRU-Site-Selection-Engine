@@ -74,7 +74,7 @@ def main():
     scored_data = an.score_pairs(paired_data, distance_weight=DISTANCE_WEIGHT, illumination_weight=ILLUMINATION_WEIGHT, size_weight=SIZE_WEIGHT, illumination_threshold=PEL_THRESHOLD, feasible_distance=FEASIBLE_DISTANCE)
     print(scored_data)
     
-    # Plot the results
+    #Plot the results
     dp.plot_layers(
         data=[elevation_data, scaled_illumination_data, slope_data, PSR_regions, PEL_regions, distance_from_PSR, distance_from_PEL],
         title=["Elevation Data", "Illumination Data", "Slope Data", "PSR Regions", "PEL Regions", "Distance from PSR Regions", "Distance from PEL Regions"],
@@ -87,7 +87,16 @@ def main():
     dp.plot(
         table=scored_data,
         title="Scored Data",
-        save_path="output/plots/scored_data.png"
+        save_path="output/scored_data.png"
+    )
+
+    dp.map_pairs(
+        raster=scaled_illumination_data,
+        table=scored_data,
+        PSR_ID_Map=PSR_regions,
+        PEL_ID_Map=PEL_regions,
+        title="Pair Locations",
+        save_path="output/pair_locations.png"
     )
 
 if __name__ == "__main__":

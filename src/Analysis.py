@@ -101,6 +101,7 @@ def score_pairs(paired_table, distance_weight=1.0, illumination_weight=1.0, size
 
     # Clean up the table 
     paired_table = paired_table.drop(columns=["PEL_ID", "PSR_ID"])
+    
     # Rank the pairs from best to worst based on their score.
     paired_table = paired_table.sort_values("total_score", ascending=False)
     return paired_table
