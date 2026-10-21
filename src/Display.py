@@ -43,7 +43,10 @@ def plot_chart(table, title, save_path):
     # Cut the table to the top 5 pairs.
     if len(table) > 5:
         table = table.nlargest(5, "total_score")
-
+    elif len(table) == 0:
+        print("No pairs to plot.")
+        return table
+    
     # Chart setup and configuration
     plt.figure(figsize=(10, 6))
     plt.xlabel("Pair ID")
@@ -72,6 +75,9 @@ def map_pairs(raster, table, PSR_ID_Map, PEL_ID_Map, title="Pair Locations", sav
     """
     Maps the scored pairs onto the raster to visualize their locations.
     """
+    if len(table) == 0:
+        print("No pairs to map.")
+        return pd.DataFrame()
 
     # Cut the table to the top 5 pairs.
     if len(table) > 5:
