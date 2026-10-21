@@ -3,3 +3,9 @@ data/
 
 # Ignore the compiled Python files and cache directories.
 src/__pycache__/
+
+# Ignore the generated plots and charts.
+output/
+
+# Ignore macOS folder metadata.
+.DS_Store

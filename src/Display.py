@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,11 +22,12 @@ def plot_layers(data = [], title = [], cmap = [], colorbar_label = [], save_path
         plt.title(title[i])
         cbar = plt.colorbar()
         cbar.set_label(colorbar_label[i])
-        # if save_path[i]:
-        #     plt.savefig(save_path[i], dpi=300, bbox_inches='tight')
+        if save_path[i]:
+            os.makedirs(os.path.dirname(save_path[i]), exist_ok=True)
+            plt.savefig(save_path[i], dpi=300, bbox_inches='tight')
     plt.show()
 
-def plot(table, title, save_path):
+def plot_chart(table, title, save_path):
     """
     Plots the score table using matplotlib.
     
@@ -49,9 +51,9 @@ def plot(table, title, save_path):
     plt.title(title)
 
     # Weighted contribution of each criterion
-    distance = table["distance_score"] * table["distance_percent (%)"] / 100
-    illumination = table["illumination_score"] * table["illumination_percent (%)"] / 100
-    size = table["size_score"] * table["size_percent (%)"] / 100
+    distance = table["total_score"] * table["distance_percent (%)"] / 100
+    illumination = table["total_score"] * table["illumination_percent (%)"] / 100
+    size = table["total_score"] * table["size_percent (%)"] / 100
 
     plt.bar(table.index, distance, width=0.4, color='red', label='Distance')
     plt.bar(table.index, illumination, width=0.4, bottom=distance, color='green', label='Illumination')

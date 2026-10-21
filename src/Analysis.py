@@ -69,10 +69,14 @@ def score_pairs(paired_table, distance_weight=1.0, illumination_weight=1.0, size
     Returns:
     pd.DataFrame: A new DataFrame containing the scored pairs and ranked from best to worst.
     """
-    illumination_score = _normalise(paired_table["PEL_illumination"], illumination_threshold, paired_table["PEL_illumination"].max())
-    distance_score = 1 - (paired_table["distance"] / feasible_distance)
-    log_size = np.log(paired_table["PSR_size"])
-    size_score = _normalise(log_size, log_size.min(), log_size.max())
+    try:
+        illumination_score = _normalise(paired_table["PEL_illumination"], illumination_threshold, paired_table["PEL_illumination"].max())
+        distance_score = 1 - (paired_table["distance"] / feasible_distance)
+        log_size = np.log(paired_table["PSR_size"])
+        size_score = _normalise(log_size, log_size.min(), log_size.max())
+    except:
+        print("Error occurred while scoring pairs. Returning an empty DataFrame.")
+        return pd.DataFrame()
 
     total_weight = distance_weight + illumination_weight + size_weight
 
@@ -98,8 +102,9 @@ def score_pairs(paired_table, distance_weight=1.0, illumination_weight=1.0, size
     paired_table["distance_percent (%)"] = (weighted_scores["distance"] / (paired_table["total_score"] * total_weight)) * 100
     paired_table["illumination_percent (%)"] = (weighted_scores["illumination"] / (paired_table["total_score"] * total_weight)) * 100
     paired_table["size_percent (%)"] = (weighted_scores["size"] / (paired_table["total_score"] * total_weight)) * 100
-
+    
     # Clean up the table 
+    paired_table.replace([np.inf, -np.inf], np.nan, inplace=True)
     paired_table = paired_table.drop(columns=["PEL_ID", "PSR_ID"])
     
     # Rank the pairs from best to worst based on their score.

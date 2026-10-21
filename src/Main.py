@@ -53,10 +53,6 @@ def main():
     PSR_region_sizes, PSR_size_stats = rg.region_sizes(PSR_regions)
     PEL_region_sizes, PEL_size_stats = rg.region_sizes(PEL_regions)
 
-    # Calculate distances from labeled regions
-    distance_from_PSR = rg.calculate_distance(PSR_regions, PIXEL_SIZE)
-    distance_from_PEL = rg.calculate_distance(PEL_regions, PIXEL_SIZE)
-
     # Get the data for each PSR and PEL region
     PSR_region_data = rg.region_data(PSR_regions, PSR_region_count, layers={"illumination": scaled_illumination_data, "elevation": elevation_data, "slope": slope_data}, values={"size": PSR_region_sizes})
     PEL_region_data = rg.region_data(PEL_regions, PEL_region_count, layers={"illumination": scaled_illumination_data, "elevation": elevation_data, "slope": slope_data}, values={"size": PEL_region_sizes})
@@ -76,15 +72,15 @@ def main():
     
     #Plot the results
     dp.plot_layers(
-        data=[elevation_data, scaled_illumination_data, slope_data, PSR_regions, PEL_regions, distance_from_PSR, distance_from_PEL],
-        title=["Elevation Data", "Illumination Data", "Slope Data", "PSR Regions", "PEL Regions", "Distance from PSR Regions", "Distance from PEL Regions"],
-        cmap=["terrain", "gray", "viridis", "plasma", "plasma", "magma", "magma"],
-        colorbar_label=["Elevation (m)", "Illumination (%)", "Slope (degrees)", "Region Labels", "Region Labels", "Distance (pixels)", "Distance (pixels)"],
-        save_path="output/plots/"
+        data=[elevation_data, scaled_illumination_data, slope_data, PSR_regions, PEL_regions],
+        title=["Elevation Data", "Illumination Data", "Slope Data", "PSR Regions", "PEL Regions"],
+        cmap=["terrain", "gray", "viridis", "plasma", "plasma"],
+        colorbar_label=["Elevation (m)", "Illumination (%)", "Slope (degrees)", "Region Labels", "Region Labels"],
+        save_path=["output/plots/elevation_data.png", "output/plots/illumination_data.png", "output/plots/slope_data.png", "output/plots/PSR_regions.png", "output/plots/PEL_regions.png"]
     )
 
     # Plot the scored data
-    dp.plot(
+    dp.plot_chart(
         table=scored_data,
         title="Scored Data",
         save_path="output/scored_data.png"
