@@ -25,6 +25,8 @@ DISTANCE_WEIGHT = 1.0 # The weight for the distance score in the pair scoring
 ILLUMINATION_WEIGHT = 1.0 # The weight for the illumination score in the pair scoring
 SIZE_WEIGHT = 1.0 # The weight for the size score in the pair scoring
 
+TOP_N_PAIRS = 5 # The number of top pairs to plot in the results.
+
 def main():
     # Load the altitude and illumination raster data
     # altitude_data = fp.read_raster(ALTITUDE_RASTER_PATH)
@@ -81,12 +83,14 @@ def main():
 
     # Plot the scored data
     dp.plot_chart(
+        top_n_pairs=TOP_N_PAIRS,
         table=scored_data,
         title="Scored Data",
         save_path="output/scored_data.png"
     )
 
     dp.map_pairs(
+        top_n_pairs=TOP_N_PAIRS,
         raster=scaled_illumination_data,
         table=scored_data,
         PSR_ID_Map=PSR_regions,

@@ -27,7 +27,7 @@ def plot_layers(data = [], title = [], cmap = [], colorbar_label = [], save_path
             plt.savefig(save_path[i], dpi=300, bbox_inches='tight')
     plt.show()
 
-def plot_chart(table, title, save_path):
+def plot_chart(top_n_pairs, table, title, save_path):
     """
     Plots the score table using matplotlib.
     
@@ -41,8 +41,8 @@ def plot_chart(table, title, save_path):
     """
 
     # Cut the table to the top 5 pairs.
-    if len(table) > 5:
-        table = table.nlargest(5, "total_score")
+    if len(table) > top_n_pairs:
+        table = table.nlargest(top_n_pairs, "total_score")
     elif len(table) == 0:
         print("No pairs to plot.")
         return table
@@ -71,7 +71,7 @@ def plot_chart(table, title, save_path):
 
     return table
 
-def map_pairs(raster, table, PSR_ID_Map, PEL_ID_Map, title="Pair Locations", save_path=None):
+def map_pairs(top_n_pairs, raster, table, PSR_ID_Map, PEL_ID_Map, title="Pair Locations", save_path=None):
     """
     Maps the scored pairs onto the raster to visualize their locations.
     """
@@ -80,8 +80,8 @@ def map_pairs(raster, table, PSR_ID_Map, PEL_ID_Map, title="Pair Locations", sav
         return pd.DataFrame()
 
     # Cut the table to the top 5 pairs.
-    if len(table) > 5:
-        table = table.nlargest(5, "total_score")
+    if len(table) > top_n_pairs:
+        table = table.nlargest(top_n_pairs, "total_score")
 
     # Get the PSR and PEL IDs from the table by splitting the Pair_ID column
     Pair_IDs = [(int(row.split(" to ")[0].replace("PSR_", "")), int(row.split(" to ")[1].replace("PEL_", ""))) for row in table.index]
@@ -164,4 +164,4 @@ if __name__ == "__main__":
                                 [0, 0, 0, 0, 0, 0],
                                 [3, 3, 0, 0, 3, 3]])
 
-    map_pairs(raster=np.zeros(example_PSR_Map.shape), table=example_data, PSR_ID_Map=example_PSR_Map, PEL_ID_Map=example_PEL_Map)
+    map_pairs(top_n_pairs=5, raster=np.zeros(example_PSR_Map.shape), table=example_data, PSR_ID_Map=example_PSR_Map, PEL_ID_Map=example_PEL_Map)

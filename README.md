@@ -80,6 +80,7 @@ a pair with the other candidates and is not an absolute measure.
 | `ILLUMINATION_WEIGHT`   | `src/Main.py`           | `1.0`         | The weight that PEL illumination holds in the final pair score.                                                                                              |
 | `SIZE_WEIGHT`           | `src/Main.py`           | `1.0`         | The weight that PSR size holds in the final pair score.                                                                                                      |
 | `ALTITUDE_OFFSET`       | `src/FileProcessing.py` | `1737400`     | LOLA reference sphere radius, in metres.                                                                                                                     |
+| `TOP_N_PAIRS`           | `src/Main.py`            | `5`          | The amount of pairs to plot with the top scores.  |
 
 ---
 
