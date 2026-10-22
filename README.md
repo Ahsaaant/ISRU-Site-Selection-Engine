@@ -10,11 +10,8 @@ The two resources pull in opposite directions. Permanently shadowed regions (PSR
 volatiles worth mining, but they are cold and dark, while peaks of eternal light (PELs) offer
 the illumination needed to power a base. A viable site has to sit close to both. The engine
 derives both region classes from the illumination data, characterises them against elevation
-and slope, and measures the distance from every point on the map to each class.
-
-The pipeline currently produces the region tables and distance maps described below. The
-scoring step that combines them into a ranked site list is not yet implemented — see
-[Roadmap](#roadmap).
+and slope, pairs every PSR with the PELs within walking distance of it, and scores and ranks
+those pairs.
 
 ---
 
@@ -33,26 +30,56 @@ The pipeline in `src/Main.py` runs the following steps.
    and converted to a percentage of time each pixel is sunlit.
 5. **Derive slope.** The elevation gradient is taken in both axes using the true pixel
    spacing; slope is the arctangent of the gradient magnitude, in degrees.
-6. **Label regions.** Illumination is thresholded into PSRs and PELs, and each contiguous
-   patch is labelled using 8-connectivity, so that diagonal neighbours count as connected.
+6. **Label regions.** Pixels that are `NaN` in any layer are masked out. Illumination is then
+   thresholded into PSRs and PELs, and each contiguous patch is labelled using
+   8-connectivity, so that diagonal neighbours count as connected.
 7. **Measure regions.** Each labelled region gets a pixel count and a row in a table holding
    its mean illumination, elevation, and slope.
-8. **Filter.** Regions below a minimum pixel count are separated out, so that single-pixel
-   noise does not reach the analysis. Both the kept and the omitted rows are returned.
-9. **Map distances.** A Euclidean distance transform gives, for every pixel, the distance in
-   metres to the nearest PSR and to the nearest PEL. Pixels inside a region are `NaN`.
+8. **Filter by size.** Regions below a minimum pixel count are separated out, so that
+   single-pixel noise does not reach the analysis.
+9. **Filter by slope.** Regions whose mean slope is at or above the slope threshold are
+   separated out, since they are unsuitable for landing and construction.
+10. **Pair regions.** For each PEL, a Euclidean distance transform gives the distance in metres
+    from every pixel to that PEL, measured between pixel centres. Every PSR whose nearest pixel
+    is within the feasible distance is paired with it.
+11. **Score pairs.** Each pair is scored on distance, PEL illumination, and PSR size, and the
+    pairs are ranked from best to worst (see [Scoring](#scoring)).
+12. **Plot.** The input layers, a score breakdown of the top 5 pairs, and a map of where those
+    pairs sit are written to `output/` (see [Outputs](#outputs)).
+
+### Scoring
+
+Each criterion is scaled to a 0–1 score, where 1 is best:
+
+| Score        | Calculation                                                                                         |
+| ------------ | --------------------------------------------------------------------------------------------------- |
+| Distance     | `1 - distance / FEASIBLE_DISTANCE`, so a closer pair scores higher and one at the limit scores 0. Distances run between pixel centres, so even touching regions are 60 m apart and score just under 1. |
+| Illumination | The PEL's mean illumination, min-max scaled from `PEL_THRESHOLD` up to the brightest paired PEL.     |
+| Size         | The log of the PSR's pixel count, min-max scaled across all pairs.                                  |
+
+The total score is the weighted mean of the three, using `DISTANCE_WEIGHT`,
+`ILLUMINATION_WEIGHT`, and `SIZE_WEIGHT`. The `distance_score`, `illumination_score`, and
+`size_score` columns in the output table hold each score after its weight is applied, so they
+only stay in the 0–1 range while the weights are 1. The table also records what percentage of
+each pair's total comes from each criterion.
+
+Illumination and size are scaled against the other pairs in the same run, so a score compares
+a pair with the other candidates and is not an absolute measure.
 
 ### Tunable Parameters
 
-| Parameter                     | Location                | Current value | Meaning                                                                                                                                       |
-| ----------------------------- | ----------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PSR_THRESHOLD`               | `src/Main.py`           | `0`           | A pixel is part of a PSR at or below this illumination percentage.                                                                            |
-| `PEL_THRESHOLD`               | `src/Main.py`           | `55`          | A pixel is part of a PEL at or above this illumination percentage.                                                                            |
-| `PIXEL_SIZE`                  | `src/Main.py`           | `60`          | The size of each pixel in terms of m².                                                                                                        |
-| `REGION_SIZE_THRESHOLD`       | `src/Main.py`           | `10`          | Regions of 10 pixels or fewer are omitted. At 60 m²/px, one pixel is 3,600 m².                                                                |
-| `FEASIBLE_DISTANCE_THRESHOLD` | `src/Main.py`           | `2000`        | The radial limit for astronauts without a rover from **[THIS PAPER](https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2025JE009434)** in m. |
-| `ALTITUDE_OFFSET`             | `src/FileProccesing.py` | `1737400`     | LOLA reference sphere radius, in metres.                                                                                                      |
-| `SLOPE_THRESHOLD`             | `src/Main.py`,          | `10`          | The maximum slope within a region to be considered, in degrees.                                                                               |
+| Parameter               | Location                | Current value | Meaning                                                                                                                                                      |
+| ----------------------- | ----------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PSR_THRESHOLD`         | `src/Main.py`           | `0`           | A pixel is part of a PSR at or below this illumination percentage.                                                                                           |
+| `PEL_THRESHOLD`         | `src/Main.py`           | `55`          | A pixel is part of a PEL above this illumination percentage.                                                                                                 |
+| `PIXEL_SIZE`            | `src/Main.py`           | `60`          | The side length of each pixel, in metres. One pixel covers 3,600 m².                                                                                         |
+| `REGION_SIZE_THRESHOLD` | `src/Main.py`           | `10`          | Regions of 10 pixels or fewer are omitted.                                                                                                                   |
+| `SLOPE_THRESHOLD`       | `src/Main.py`           | `10`          | A region is considered only if its mean slope is below this value, in degrees.                                                                               |
+| `FEASIBLE_DISTANCE`     | `src/Main.py`           | `2000`        | The maximum PSR to PEL distance for a pair, in metres. This is the radial limit for astronauts without a rover from **[THIS PAPER](https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2025JE009434)**. |
+| `DISTANCE_WEIGHT`       | `src/Main.py`           | `1.0`         | The weight that distance holds in the final pair score.                                                                                                      |
+| `ILLUMINATION_WEIGHT`   | `src/Main.py`           | `1.0`         | The weight that PEL illumination holds in the final pair score.                                                                                              |
+| `SIZE_WEIGHT`           | `src/Main.py`           | `1.0`         | The weight that PSR size holds in the final pair score.                                                                                                      |
+| `ALTITUDE_OFFSET`       | `src/FileProcessing.py` | `1737400`     | LOLA reference sphere radius, in metres.                                                                                                                     |
 
 ---
 
@@ -60,17 +87,22 @@ The pipeline in `src/Main.py` runs the following steps.
 
 ```
 .
-├── data/                 # Rasters and QGIS project (untracked — see Data)
+├── data/                  # Rasters and QGIS project (untracked — see Data)
+├── output/                # Generated plots (untracked — created on each run)
 ├── src/
-│   ├── Main.py           # Pipeline wiring, file paths, and thresholds
-│   ├── FileProccesing.py # Raster I/O, resampling, unit conversion, slope, plotting
-│   └── Regions.py        # Thresholding, labelling, region statistics, distances, filtering
+│   ├── Main.py            # Pipeline wiring, file paths, thresholds, and weights
+│   ├── FileProcessing.py  # Raster I/O, resampling, unit conversion, and slope
+│   ├── Regions.py         # Validity mask, labelling, region statistics, distances, filtering
+│   ├── Analysis.py        # PSR to PEL pairing and pair scoring
+│   └── Display.py         # Layer plots, score chart, and pair location map
 ├── Requirements.txt
 └── README.md
 ```
 
-`FileProccesing.py` and `Regions.py` each carry a `__main__` block with small worked examples,
-which is the quickest way to see what an individual function returns.
+`Regions.py`, `Analysis.py`, and `Display.py` each carry a `__main__` block that runs their
+functions on small hand-made arrays, which is the quickest way to see what an individual
+function returns. The `__main__` block in `FileProcessing.py` runs the loading steps on the
+real rasters, so it needs the files in `data/`, and it prints nothing.
 
 ---
 
@@ -126,17 +158,33 @@ average radius of the Moon used as the standard datum.
 python src/Main.py
 ```
 
-Run this from the repository root. `Main.py` refers to its inputs as `data/...` relative to the
-working directory, so running it from inside `src/` will fail to find the rasters.
+Run this from the repository root. `Main.py` refers to its inputs and outputs as `data/...` and
+`output/...` relative to the working directory, so running it from inside `src/` will fail to
+find the rasters.
 
-The run prints the PSR and PEL region tables along with the rows omitted by the size filter.
-Layer plotting is available through `plot_layers` in `FileProccesing.py`; the call in `Main.py`
-is currently commented out.
+The run prints the scored pair table, ranked from best to worst, saves the plots below, and
+opens them in matplotlib windows. The five layer plots open together, then the score chart,
+then the pair map; close each set of windows to let the run continue.
+
+Each row of the table is indexed by a pair ID of the form `PSR_<id> to PEL_<id>`, where the
+IDs match the labels in the PSR and PEL region plots. The columns are the pair's `distance`
+(m), `PEL_illumination` (%), and `PSR_size` (pixels), followed by the three criterion scores,
+the `total_score`, and the percentage that each criterion contributes to the total.
+
+### Outputs
+
+| File                          | Contents                                                                                     |
+| ----------------------------- | -------------------------------------------------------------------------------------------- |
+| `output/plots/*.png`          | The elevation, illumination, slope, PSR region, and PEL region layers.                       |
+| `output/scored_data.png`      | A stacked bar chart of the top 5 pairs, split into the contribution of each criterion.       |
+| `output/pair_locations.png`   | The top 5 pairs on the illumination map, each joined at its closest points and marked at the midpoint, coloured by total score. |
+
+`output/` is gitignored and is created on the first run.
 
 ---
 
 ## Roadmap
 
-- Combine the PSR and PEL distance maps into a single site score, and rank candidate locations.
-- Add slope and region-size constraints to the scoring, for landing and construction viability.
-- Re-enable plotting and write figures to an `output/` directory.
+- Exit cleanly when no PSR and PEL pairs fall within the feasible distance. The plotting steps
+  currently fail on an empty score table.
+- Make the number of pairs shown in the plots (currently 5) a parameter in `Main.py`.

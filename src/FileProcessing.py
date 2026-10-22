@@ -1,4 +1,4 @@
-import rasterio, numpy as np, matplotlib.pyplot as plt
+import rasterio, numpy as np, matplotlib.pyplot as plt, pandas as pd
 from rasterio.warp import reproject, Resampling
 
 # rasterio 1.5.0 triggers a NumPy 2.5 shape deprecation in .scales; harmless, tracked upstream.
@@ -118,27 +118,6 @@ def elevation_to_slope(elevation_data, pixel_size_x, pixel_size_y):
     
     return slope
 
-def plot_layers(data = [], title = [], cmap = [], colorbar_label = [], save_path = []):
-    """
-    Plots raster layers using matplotlib.
-    
-    Parameters:
-    data (list of np.ndarray): The raster data to be plotted.
-    title (list of str): The titles of the plots.
-    cmap (list of str): The colormaps to be used for the plots.
-    colorbar_label (list of str): The labels for the colorbars.
-    """
-
-    for i in range(len(data)):
-        plt.figure(figsize=(10, 10))
-        plt.imshow(data[i], cmap=cmap[i])
-        plt.title(title[i])
-        cbar = plt.colorbar()
-        cbar.set_label(colorbar_label[i])
-        # if save_path[i]:
-        #     plt.savefig(save_path[i], dpi=300, bbox_inches='tight')
-    plt.show()
-
 # Test the functions
 if __name__ == "__main__":
     # Example usage of the functions
@@ -159,11 +138,3 @@ if __name__ == "__main__":
     
     # Calculate slope from elevation data
     slope_data = elevation_to_slope(elevation_data, pixel_size_x, pixel_size_y)
-    
-    # Plot the layers
-    plot_layers(
-        data=[elevation_data, scaled_illumination_data, slope_data],
-        title=["Elevation Data", "Illumination Data", "Slope Data"],
-        cmap=["terrain", "gray", "viridis"],
-        colorbar_label=["Elevation (m)", "Illumination (%)", "Slope (degrees)"]
-    )

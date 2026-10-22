@@ -25,6 +25,7 @@ def label_regions(data, valid_map, threshold, greater_than=True):
 
     Returns:
     numpy.ndarray: An array with labeled regions.
+    int: The number of labeled regions.
     """
     # Create a binary mask where values above or below the threshold are True and match the validity_mask
     if greater_than:
