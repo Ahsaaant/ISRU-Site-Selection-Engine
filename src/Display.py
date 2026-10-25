@@ -40,27 +40,30 @@ def plot_chart(top_n_pairs, table, title, save_path):
     pandas.DataFrame: The input table, unchanged.
     """
 
-    # Cut the table to the top 5 pairs.
-    if len(table) > top_n_pairs:
-        table = table.nlargest(top_n_pairs, "total_score")
-    elif len(table) == 0:
+    # Cut the table to the top {n} pairs or exit if there are no pairs.
+    if len(table) == 0:
         print("No pairs to plot.")
         return table
+    else: table = table.nlargest(top_n_pairs, "total_score")
     
     # Chart setup and configuration
     plt.figure(figsize=(10, 6))
-    plt.xlabel("Pair ID")
-    plt.ylabel("Total Score")
+    plt.xlabel("Pair Rank")
+    plt.ylabel("Landing Sites Scored")
     plt.title(title)
+
+    table["Rank"] = table["total_score"].rank(ascending=False)
 
     # Weighted contribution of each criterion
     distance = table["total_score"] * table["distance_percent (%)"] / 100
     illumination = table["total_score"] * table["illumination_percent (%)"] / 100
     size = table["total_score"] * table["size_percent (%)"] / 100
 
-    plt.bar(table.index, distance, width=0.4, color='red', label='Distance')
-    plt.bar(table.index, illumination, width=0.4, bottom=distance, color='green', label='Illumination')
-    plt.bar(table.index, size, width=0.4, bottom=distance + illumination, color='blue', label='Size')
+
+
+    plt.bar(table["Rank"], distance, width=0.4, color='red', label='Distance')
+    plt.bar(table["Rank"], illumination, width=0.4, bottom=distance, color='green', label='Illumination')
+    plt.bar(table["Rank"], size, width=0.4, bottom=distance + illumination, color='blue', label='Size')
 
     plt.legend(title="Score segment")
 
@@ -114,14 +117,16 @@ def map_pairs(top_n_pairs, raster, table, PSR_ID_Map, PEL_ID_Map, title="Pair Lo
     plt.imshow(np.ma.masked_equal(PSR_location, 0), cmap="Blues", alpha=0.6)
     plt.imshow(np.ma.masked_equal(PEL_location, 0), cmap="autumn", alpha=0.6)
 
+    i = 0
     # Line between the closest points of each pair, with the midpoint marked
     for pair_id, row in mapped_data.iterrows():
-        plt.plot([row["PSR_col"], row["PEL_col"]], [row["PSR_row"], row["PEL_row"]], color="white", linewidth=1)
-        plt.annotate(str(pair_id), (row["mid_col"], row["mid_row"]), textcoords="offset points", color="white", fontsize=8) 
+        i += 1
+        plt.plot([row["PSR_col"], row["PEL_col"]], [row["PSR_row"], row["PEL_row"]], color="black", linewidth=1)
+        plt.annotate(str(i), (row["mid_col"], row["mid_row"]), textcoords="offset points", color="white", fontsize=8, xytext=(8, 8), zorder=4)
 
     # scatter takes (x, y) = (col, row)
     midpoints = plt.scatter(mapped_data["mid_col"], mapped_data["mid_row"], c=table["total_score"], cmap="viridis", edgecolors="white", s=60, zorder=3)
-    plt.colorbar(midpoints, label="Total Score")
+    plt.colorbar(midpoints, label="Landing Sites Scored")
     plt.title(title)
 
     if save_path:
@@ -163,5 +168,6 @@ if __name__ == "__main__":
                                 [0, 0, 2, 2, 0, 0],
                                 [0, 0, 0, 0, 0, 0],
                                 [3, 3, 0, 0, 3, 3]])
-
+    
+    plot_chart(top_n_pairs=5, table=example_data, title="Scored Data", save_path="output/scored_data.png")
     map_pairs(top_n_pairs=5, raster=np.zeros(example_PSR_Map.shape), table=example_data, PSR_ID_Map=example_PSR_Map, PEL_ID_Map=example_PEL_Map)

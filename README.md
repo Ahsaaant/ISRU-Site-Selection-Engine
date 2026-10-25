@@ -1,7 +1,4 @@
 # ISRU Site-Selection-Engine
-
-Status: In Development
-
 The ISRU Site-Selection Engine takes the NASA LOLA data for the Moon's south pole and
 identifies candidate base locations from their proximity to cold traps and to well lit power
 areas.
@@ -12,11 +9,8 @@ the illumination needed to power a base. A viable site has to sit close to both.
 derives both region classes from the illumination data, characterises them against elevation
 and slope, pairs every PSR with the PELs within walking distance of it, and scores and ranks
 those pairs.
-
----
-
+___
 ## How It Works
-
 The pipeline in `src/Main.py` runs the following steps.
 
 1. **Load rasters.** The illumination and altitude GeoTIFFs are read with `rasterio`.
@@ -48,9 +42,7 @@ The pipeline in `src/Main.py` runs the following steps.
     pairs sit are written to `output/` (see [Outputs](#outputs)).
 
 ### Scoring
-
 Each criterion is scaled to a 0–1 score, where 1 is best:
-
 | Score        | Calculation                                                                                         |
 | ------------ | --------------------------------------------------------------------------------------------------- |
 | Distance     | `1 - distance / FEASIBLE_DISTANCE`, so a closer pair scores higher and one at the limit scores 0. Distances run between pixel centres, so even touching regions are 60 m apart and score just under 1. |
@@ -67,7 +59,6 @@ Illumination and size are scaled against the other pairs in the same run, so a s
 a pair with the other candidates and is not an absolute measure.
 
 ### Tunable Parameters
-
 | Parameter               | Location                | Current value | Meaning                                                                                                                                                      |
 | ----------------------- | ----------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `PSR_THRESHOLD`         | `src/Main.py`           | `0`           | A pixel is part of a PSR at or below this illumination percentage.                                                                                           |
@@ -85,7 +76,6 @@ a pair with the other candidates and is not an absolute measure.
 ---
 
 ## Project Structure
-
 ```
 .
 ├── data/                  # Rasters and QGIS project (untracked — see Data)
@@ -108,7 +98,6 @@ real rasters, so it needs the files in `data/`, and it prints nothing.
 ---
 
 ## Setup
-
 Built against Python 3.13.
 
 ```bash
@@ -123,19 +112,16 @@ direct dependencies are `rasterio`, `numpy`, `scipy`, `pandas`, and `matplotlib`
 ---
 
 ## Data
-
 The rasters are large and are not tracked in this repository. `data/` is gitignored, so a
 fresh clone has no inputs and the pipeline will not run until they are put in place.
 
 ### Sources
-
 1. [LOLA Illumination (ABGVIS_85S_060M_201608)](https://pgda.gsfc.nasa.gov/products/69) —
    average sun visibility of each 60 m × 60 m pixel, from 85°S to the south pole.
 2. [LOLA DEM (LDEM_85S_10M_FLOAT)](https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/float_img/) —
    altitude of each 10 m × 10 m pixel, from 85°S to the south pole.
 
 ### Preparation
-
 The DEM needs a conversion step before the pipeline can use it. LOLA distributes its values in
 kilometres while the pixel spacing is in metres, and slope is meaningless until the two agree.
 
@@ -154,7 +140,6 @@ average radius of the Moon used as the standard datum.
 ---
 
 ## Usage
-
 ```bash
 python src/Main.py
 ```
@@ -173,7 +158,6 @@ IDs match the labels in the PSR and PEL region plots. The columns are the pair's
 the `total_score`, and the percentage that each criterion contributes to the total.
 
 ### Outputs
-
 | File                          | Contents                                                                                     |
 | ----------------------------- | -------------------------------------------------------------------------------------------- |
 | `output/plots/*.png`          | The elevation, illumination, slope, PSR region, and PEL region layers.                       |
@@ -184,8 +168,7 @@ the `total_score`, and the percentage that each criterion contributes to the tot
 
 ---
 
-## Roadmap
+## Limitations
+The data used has a resoulution of 60m, meaning each pixel represents 3,600m² of terrain and averages the data across that square, which could dampen the apparent roughness of smaller areas, as well as stronger PELs.
 
-- Exit cleanly when no PSR and PEL pairs fall within the feasible distance. The plotting steps
-  currently fail on an empty score table.
-- Make the number of pairs shown in the plots (currently 5) a parameter in `Main.py`.
+The scoring of these regions also only consider PEL illumination, scale of PSR, and distance between the two, while filtering areas with high slopes. There are more factors to consider when choosing a landing location such as
