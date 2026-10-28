@@ -9,6 +9,8 @@ the illumination needed to power a base. A viable site has to sit close to both.
 derives both region classes from the illumination data, characterises them against elevation
 and slope, pairs every PSR with the PELs within walking distance of it, and scores and ranks
 those pairs.
+
+![Top 5 Candidate PSR-PEL pairs](results/pair_locations.png)
 ___
 ## How It Works
 The pipeline in `src/Main.py` runs the following steps.
@@ -171,4 +173,6 @@ the `total_score`, and the percentage that each criterion contributes to the tot
 ## Limitations
 The data used has a resoulution of 60m, meaning each pixel represents 3,600m² of terrain and averages the data across that square, which could dampen the apparent roughness of smaller areas, as well as stronger PELs.
 
-The scoring of these regions also only consider PEL illumination, scale of PSR, and distance between the two, while filtering areas with high slopes. There are more factors to consider when choosing a landing location such as
+The scoring of these regions also only consider PEL illumination, scale of PSR, and distance between the two, while filtering areas with high slopes. There are more factors to consider when choosing a landing location. For example a further reason the Artemis mission is focused on the south pole is for scientific research on the South Polar Aitken Basin which is an ancient impact crater which Shackleton Crater is on the rim of. Taking samples from this basin can help us better understand the interior makeup of the Moon.
+
+The engine does not score on scientific value, ease of communication between the site and Earth, or other factors that could affect site desireablity. 

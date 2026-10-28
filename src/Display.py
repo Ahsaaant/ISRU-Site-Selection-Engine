@@ -49,7 +49,7 @@ def plot_chart(top_n_pairs, table, title, save_path):
     # Chart setup and configuration
     plt.figure(figsize=(10, 6))
     plt.xlabel("Pair Rank")
-    plt.ylabel("Landing Sites Scored")
+    plt.ylabel("Total Score of Site")
     plt.title(title)
 
     table["Rank"] = table["total_score"].rank(ascending=False)
