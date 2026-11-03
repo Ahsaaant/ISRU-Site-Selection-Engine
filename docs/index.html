@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ISRU Site-Selection Engine</title>
+  <meta name="description" content="Candidate base sites at the lunar south pole, ranked by how close they sit to both water ice and near-constant sunlight. Change the thresholds and weights and watch the top three move.">
+  <meta name="theme-color" content="#0d0d0d">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23c3c2b7'/%3E%3Ccircle cx='12' cy='19' r='5' fill='%233987e5'/%3E%3Ccircle cx='21' cy='11' r='4' fill='%23d95926'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <div class="panel">
+      <header class="masthead">
+        <p class="eyebrow">Lunar south pole · LOLA 60 m data</p>
+        <h1>ISRU Site-Selection Engine</h1>
+        <p class="tagline">
+          A base needs water ice from the permanently shadowed craters and power from the sunlit
+          ridges beside them. These are the sites that sit closest to both.
+        </p>
+        <nav class="masthead-links">
+          <a href="#about">About</a>
+          <a href="#findings">Findings</a>
+          <a href="https://github.com/Ahsaaant/ISRU-Site-Selection-Engine">Source on GitHub</a>
+        </nav>
+      </header>
+
+      <section class="controls" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" class="section-label">Configuration</h2>
+
+        <fieldset class="control">
+          <legend>PEL threshold <span class="control-hint">share of time a ridge must be sunlit</span></legend>
+          <div class="segmented" id="pel-options"></div>
+        </fieldset>
+
+        <fieldset class="control">
+          <legend>Feasible distance <span class="control-hint">longest walk from ice to light</span></legend>
+          <div class="segmented" id="distance-options"></div>
+        </fieldset>
+
+        <fieldset class="control">
+          <legend>Scoring priority</legend>
+          <div class="presets" id="weight-options"></div>
+        </fieldset>
+
+        <p class="summary" id="summary" aria-live="polite"></p>
+        <p class="defaults-note">
+          <span class="default-mark" aria-hidden="true"></span>The repository's default
+          <button type="button" class="reset" id="reset">Reset to defaults</button>
+        </p>
+      </section>
+    </div>
+
+    <section class="map-wrap" aria-label="Map of the lunar south pole showing the top sites">
+      <div id="map"></div>
+    </section>
+
+    <section class="sites" aria-labelledby="sites-heading">
+      <div class="sites-head">
+        <h2 id="sites-heading" class="section-label">Top sites</h2>
+        <ul class="key" aria-label="Score criteria">
+          <li><span class="swatch" style="--c: var(--distance)"></span>Distance</li>
+          <li><span class="swatch" style="--c: var(--illumination)"></span>Illumination</li>
+          <li><span class="swatch" style="--c: var(--size)"></span>Size</li>
+        </ul>
+      </div>
+      <ol class="site-list" id="site-list"></ol>
+    </section>
+  </main>
+
+  <!-- The write-up below the interface, laid out like the repository's README -->
+  <section class="readme" id="about" aria-labelledby="readme-title">
+    <div class="readme-inner">
+      <div class="readme-file">
+        <div class="readme-bar">
+          <svg class="readme-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M0 1.75A.75.75 0 0 1 .75 1h4.253c1.227 0 2.317.59 3 1.501A3.743 3.743 0 0 1 11.006 1h4.245a.75.75 0 0 1 .75.75v10.5a.75.75 0 0 1-.75.75h-4.507a2.25 2.25 0 0 0-1.591.659l-.622.621a.75.75 0 0 1-1.06 0l-.622-.621A2.25 2.25 0 0 0 5.258 13H.75a.75.75 0 0 1-.75-.75Zm7.251 10.324.004-5.073-.002-2.253A2.25 2.25 0 0 0 5.003 2.5H1.5v9h3.757a3.75 3.75 0 0 1 1.994.574ZM8.755 4.75l-.004 7.322a3.752 3.752 0 0 1 1.992-.572H14.5v-9h-3.495a2.25 2.25 0 0 0-2.25 2.25Z"/></svg>
+          README
+        </div>
+
+        <div class="readme-body">
+          <h2 class="readme-title" id="readme-title">ISRU Site-Selection Engine</h2>
+          <p>
+            The engine takes NASA's LOLA data for the Moon's south pole and ranks candidate base
+            locations by how close they sit to both water ice and near-constant sunlight. The
+            interface above shows its results for 64 configurations; this page explains what it
+            does, why, and what it found.
+          </p>
+
+          <nav class="toc" aria-label="Contents">
+            <p class="toc-label">Contents</p>
+            <ol>
+              <li><a href="#why">Why it was made</a></li>
+              <li><a href="#interface">Using the interface</a></li>
+              <li><a href="#how-it-works">How it works</a></li>
+              <li><a href="#findings">Findings</a></li>
+              <li><a href="#limitations">Limitations</a></li>
+              <li><a href="#references">Data and references</a></li>
+            </ol>
+          </nav>
+
+          <h2 id="why">Why it was made</h2>
+          <p>
+            A crewed base at the lunar south pole would depend on two resources that the terrain keeps
+            apart. Water ice survives only in <strong>permanently shadowed regions</strong> (PSRs),
+            crater floors and hollows that never see the Sun, where it could be turned into drinking
+            water, oxygen, and rocket propellant on site. That is <strong>in-situ resource
+            utilisation</strong> (ISRU). Power has to come from the opposite kind of ground: the
+            <strong>peaks of eternal light</strong> (PELs), ridges and crater rims that are sunlit most
+            of the time.
+          </p>
+          <p>
+            A useful site has to be close to both, close enough for astronauts to walk from the light
+            to the ice. The engine finds those places in public NASA data and makes the trade-offs
+            visible: how the answer changes when a site must be brighter, when a longer walk is
+            allowed, or when the size of the cold trap matters most.
+          </p>
+
+          <h2 id="interface">Using the interface</h2>
+          <p>The controls at the top of the page choose the configuration:</p>
+          <ul>
+            <li><strong>PEL threshold</strong>: the share of time a ridge must be sunlit to count as a PEL.</li>
+            <li>
+              <strong>Feasible distance</strong>: the longest walk allowed from a PSR to a PEL. The
+              2 km default is the radial limit for astronauts working without a rover
+              <a class="cite" href="#ref-1">[1]</a>.
+            </li>
+            <li><strong>Scoring priority</strong>: which of the three scores counts most.</li>
+          </ul>
+          <p>
+            On the map, <span class="term" style="--c: var(--size)">blue</span> cut-outs are PSRs,
+            <span class="term" style="--c: var(--illumination)">orange</span> cut-outs are PELs, the
+            dashed <span class="term" style="--c: var(--distance)">green</span> line is the shortest
+            walk between them, and the numbered pins are the top 3 sites. The small white dots are the
+            130 candidate landing sites of Wueller et al. (2026) <a class="cite" href="#ref-1">[1]</a>:
+            filled where their region is one of the nine NASA kept for Artemis III, hollow where it is
+            not. The basemap's brightness is the share of time each spot is sunlit, with a faint
+            hillshade so the shadowed crater floors stay visible.
+          </p>
+          <p>
+            Each site card splits its score by criterion and lists the walk, the PEL's sunlight, the
+            PSR's area, and the nearest of Wueller et al.'s landing sites. It also shows how the PSR
+            ranks, by its best pair, in all 16 threshold and distance settings under the current
+            weights, as a measure of how robust the site is. Every configuration has its own URL, so a
+            view can be shared.
+          </p>
+
+          <h2 id="how-it-works">How it works</h2>
+          <p>
+            Every configuration was computed in advance by the same Python pipeline that produces the
+            repository's results, so switching between them is instant.
+          </p>
+          <ol>
+            <li>
+              <strong>Load the data.</strong> The 10 m LOLA elevation model is resampled onto the 60 m
+              illumination grid, converted to elevation, and used to derive slope.
+            </li>
+            <li>
+              <strong>Find the regions.</strong> Pixels that are never sunlit become PSRs, and pixels
+              sunlit for more than the PEL threshold become PELs. Each connected patch is one region.
+            </li>
+            <li>
+              <strong>Filter them.</strong> Regions of 10 pixels or fewer, or with a mean slope of 10°
+              or more, are dropped.
+            </li>
+            <li>
+              <strong>Pair them.</strong> Each PSR within the feasible distance of a PEL is paired with
+              it, measured between the closest pixels of the two.
+            </li>
+            <li><strong>Score them</strong> on three criteria, each from 0 to 1:</li>
+          </ol>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th scope="col">Score</th><th scope="col">Calculation</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="term" style="--c: var(--distance)">Distance</span></td>
+                  <td><code>1 − distance / feasible distance</code>, so a closer pair scores higher.</td>
+                </tr>
+                <tr>
+                  <td><span class="term" style="--c: var(--illumination)">Illumination</span></td>
+                  <td>The PEL's mean sunlight, scaled from the threshold up to the brightest paired PEL.</td>
+                </tr>
+                <tr>
+                  <td><span class="term" style="--c: var(--size)">Size</span></td>
+                  <td>The log of the PSR's area, scaled across all pairs.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>The total is the weighted mean of the three, with the weights set by the scoring priority.</p>
+
+          <p class="note">
+            Illumination and size are scaled against the other pairs in the same configuration, so a
+            score compares a site with its rivals under that configuration. It is not an absolute
+            measure, and scores from different configurations should not be compared. Ranks do carry
+            across, which is why the site cards follow ranks. Where three or fewer pairs are in range,
+            every one of them makes the top 3, and the card says how many of its places came that way.
+          </p>
+
+          <h2 id="findings">Findings</h2>
+          <p>
+            At the default settings (a 55% PEL threshold, a 2 km walk, and equal weights), the engine
+            finds 62 PSR–PEL pairs. These are the top 3:
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Rank</th><th scope="col">Pair</th><th scope="col">Location</th>
+                  <th scope="col" class="num">PSR area</th><th scope="col" class="num">PEL sunlit</th>
+                  <th scope="col" class="num">Walk</th><th scope="col" class="num">Score</th>
+                  <th scope="col">Nearest Wueller et al. site <a class="cite" href="#ref-1">[1]</a></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>1</td><td><code>PSR_25131 → PEL_808</code></td><td>89.93° S, 216.1° E</td><td class="num">1.87 km²</td><td class="num">64.9%</td><td class="num">1,342 m</td><td class="num">0.768</td><td>CR08, Connecting Ridge, 8.6 km</td></tr>
+                <tr><td>2</td><td><code>PSR_27173 → PEL_897</code></td><td>89.34° S, 245.1° E</td><td class="num">1.07 km²</td><td class="num">62.1%</td><td class="num">1,380 m</td><td class="num">0.621</td><td>CRE02, Connecting Ridge Extension, 0.7 km</td></tr>
+                <tr><td>3</td><td><code>PSR_26090 → PEL_814</code></td><td>89.00° S, 264.1° E</td><td class="num">0.054 km²</td><td class="num">62.5%</td><td class="num">134 m</td><td class="num">0.585</td><td>CRE01, Connecting Ridge Extension, 0.8 km</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            Locations are the midpoint of each walk. The #1 site is near the rim of Shackleton crater,
+            about 2 km from the pole, and it is the most robust result: under equal weights it ranks
+            first in 10 of the 16 threshold and distance settings.
+          </p>
+
+          <h3 id="finding-small-traps">1. The engine picks small cold traps, not the big craters</h3>
+          <p>
+            None of the top sites are in the big crater PSRs, and size is not the reason. The engine
+            labels each crater's shadow as a single region, and every one of them passes the size
+            filter. They drop out for two other reasons:
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th scope="col">Crater</th><th scope="col" class="num">PSR area</th><th scope="col" class="num">Mean slope</th><th scope="col" class="num">Nearest PEL</th><th scope="col">Why it is excluded</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Shoemaker</td><td class="num">1,085 km²</td><td class="num">9.1°</td><td class="num">34 km</td><td>No PEL within walking distance</td></tr>
+                <tr><td>Haworth</td><td class="num">1,029 km²</td><td class="num">9.7°</td><td class="num">18 km</td><td>No PEL within walking distance</td></tr>
+                <tr><td>Faustini</td><td class="num">668 km²</td><td class="num">11.0°</td><td class="num">4.3 km</td><td>Slope filter, and no PEL within 2 km</td></tr>
+                <tr><td>Sverdrup</td><td class="num">556 km²</td><td class="num">7.5°</td><td class="num">6.5 km</td><td>No PEL within walking distance</td></tr>
+                <tr><td>Shackleton</td><td class="num">234 km²</td><td class="num">26.8°</td><td class="num">1.2 km</td><td>Slope filter</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            "Nearest PEL" is the shortest distance from the crater's PSR to a PEL above 55% that passes
+            the filters. Even the 5 km option reaches only Faustini, which fails the slope filter anyway.
+          </p>
+          <p>
+            Shackleton is the only crater close enough. With the slope filter switched off for PSRs it
+            would rank first, but the part of it within 2 km of those PELs is the upper crater wall:
+            0.2–2.1 km² of ground with a mean slope of 30–32°. Excluding it is the right call. LOLA
+            measurements of the crater by Zuber et al. (2012) also found that the brightness of its
+            floor is best explained by little ice building up since the crater formed
+            <a class="cite" href="#ref-2">[2]</a>.
+          </p>
+          <p>
+            So the engine's sites are small PSRs of 0.05–2 km² on the ridges between the craters. The
+            literature supports that being where reachable ice is:
+          </p>
+          <ul>
+            <li>
+              <strong>Hayne et al. (2021)</strong> <a class="cite" href="#ref-3">[3]</a> modelled cold
+              traps from 1 km down to 1 cm across. These micro cold traps are the most numerous cold
+              traps on the Moon and hold about 10–20% of the permanent cold-trap area for water, which
+              the authors conclude may make polar ice more accessible to missions than previously
+              thought.
+            </li>
+            <li>
+              <strong>Barker et al. (2023)</strong> <a class="cite" href="#ref-4">[4]</a> found that
+              poleward of 80° S, PSRs smaller than 1 km² hold 15 ± 5% of the total PSR area.
+            </li>
+            <li>
+              <strong>Wueller et al. (2026)</strong> <a class="cite" href="#ref-1">[1]</a> found the same
+              around their landing sites: the median of the 141 PSRs within 2 km of the sites they
+              assessed covers 6,116 m², under two of the engine's pixels.
+            </li>
+          </ul>
+
+          <h3 id="finding-wueller">2. Compared with Wueller et al. (2026)</h3>
+          <p>
+            Wueller et al. <a class="cite" href="#ref-1">[1]</a> asked a close version of the same
+            question: which landing sites inside NASA's Artemis candidate regions have good
+            illumination and potentially volatile-rich PSRs within the 2 km walking limit. Their method
+            differs from the engine's at almost every step.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th scope="col"></th><th scope="col">This engine</th><th scope="col">Wueller et al. (2026)</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Search area</th><td>All of 85–90° S</td><td>The 16 Artemis candidate regions</td></tr>
+                <tr><th scope="row">Light</th><td>Average over the ~18.6-year illumination cycle, at 60 m</td><td>Whether a site stays lit for a 6.5-day mission in each midsummer, 2025–2032</td></tr>
+                <tr><th scope="row">Terrain</th><td>Mean slope under 10° across each whole region</td><td>The lander's landing requirements, including an 8° slope limit</td></tr>
+                <tr><th scope="row">Ice</th><td>PSR area</td><td>Volatile estimates from Diviner temperatures and modelled crater ages</td></tr>
+                <tr><th scope="row">Output</th><td>Ranked PSR–PEL pairs</td><td>130 candidate landing sites, and the 141 PSRs within 2 km of the sites in four of the regions</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            The comparison uses their published landing sites and PSRs
+            <a class="cite" href="#ref-5">[5]</a>, reprojected onto the engine's grid. Each engine site
+            is measured from its PEL, where a lander would set down.
+          </p>
+          <p class="list-label">Where they agree</p>
+          <ul>
+            <li>
+              Sites #2 and #3 are 0.7 km and 0.8 km from their sites CRE02 and CRE01, in the Connecting
+              Ridge Extension region, and both PSRs overlap PSRs that Wueller et al. assessed. The one
+              under #2 ranks 15th of 141 by their maximum volatile estimate. The one under #3 is among
+              the 83 whose maximum estimate is not positive.
+            </li>
+            <li>
+              At the 60% and 65% thresholds the engine's top site moves to Malapert Massif or Mons
+              Mouton, 0.3–0.9 km from their sites MMA_K2023 and MMO01.
+            </li>
+            <li>
+              Across all 64 configurations, 22 of the 58 distinct sites the engine puts in a top 3 have
+              their PEL within 1 km of one of their landing sites.
+            </li>
+          </ul>
+          <p class="list-label">Where they disagree</p>
+          <ul>
+            <li>
+              The engine's #1 site is outside the ground their sites cover. The nearest, CR08 on
+              Connecting Ridge, is 8.6 km away, and their map of ground meeting the lander's
+              requirements has none within 2 km of the engine's PEL.
+            </li>
+            <li>
+              Most of their sites are not PELs to the engine. Of the 105 inside the engine's 85° S
+              coverage, the median site is sunlit 44.8% of the time on the long-term map, and only 17
+              are on or beside a PEL at the 55% threshold. A crewed sortie needs light only for the 6.5
+              days it is there, which a site can have in the right midsummer despite a lower average. A
+              base needs light all year, and the long-term average is what the engine measures.
+            </li>
+            <li>
+              Most of their PSRs are too small for the engine to see. Only 12 of the 141 are larger than
+              the engine's 10-pixel minimum, although those 12 hold 62% of the area, and 55 are smaller
+              than a single 60 m pixel.
+            </li>
+          </ul>
+
+          <h3 id="finding-artemis">3. Compared with the Artemis III regions</h3>
+          <p>
+            NASA named 13 candidate regions for Artemis III in August 2022
+            <a class="cite" href="#ref-6">[6]</a> and narrowed them to nine in October 2024
+            <a class="cite" href="#ref-7">[7]</a>: Peak near Cabeus B, Haworth, Malapert Massif, Mons
+            Mouton Plateau, Mons Mouton, Nobile Rim 1, Nobile Rim 2, de Gerlache Rim 2, and Slater
+            Plain.
+          </p>
+          <p>
+            The engine's default top 3 lie between the pole and Connecting Ridge Extension, around the
+            Connecting Ridge regions that were on the 2022 list but not the 2024 one. NASA says the cut
+            reflects the constraints of Artemis III itself, such as launch windows, communication, and
+            terrain, and does not mean the removed regions are unsuitable for later missions
+            <a class="cite" href="#ref-8">[8]</a>. The engine is built for a base supplied by local ice
+            rather than a single sortie, so the two lists are answering different questions.
+          </p>
+          <p>
+            The engine's top sites at the 60% and 65% thresholds, near Malapert Massif and Mons Mouton,
+            are both in regions on the 2024 list, although at 65% only 1 to 10 pairs are in range at all.
+          </p>
+
+          <h2 id="limitations">Limitations</h2>
+          <p>
+            The data has a resolution of 60 m, so each pixel averages 3,600 m² of terrain. That can
+            smooth over rough ground and dilute the brightest PELs. It also hides the smallest cold
+            traps: Hayne et al. find cold traps down to 1 cm across <a class="cite" href="#ref-3">[3]</a>,
+            and 55 of the 141 PSRs that Wueller et al. assessed are smaller than one pixel
+            <a class="cite" href="#ref-1">[1]</a>, so the engine misses PSRs that may hold real ice.
+          </p>
+          <p>
+            Illumination is the long-term average at ground level. A short crewed mission only needs
+            light while it is there, so the engine understates sites that are well lit in the right
+            midsummer. Solar panels on a mast also see more light than the ground: Gläser et al. (2014)
+            model Connecting Ridge as sunlit 92.27% of the time at 2 m above the surface and 95.65% at
+            10 m <a class="cite" href="#ref-9">[9]</a>.
+          </p>
+          <p>
+            The slope filter uses the mean slope of a whole region at 60 m. That is coarser than a
+            lander's own limits, and for a PSR it measures the whole crater rather than the part a walk
+            can reach.
+          </p>
+          <p>
+            The scoring only considers PEL illumination, PSR size, and the distance between the two. It
+            does not estimate how much ice a PSR holds, which depends on its temperature and age
+            <a class="cite" href="#ref-1">[1]</a>. It also leaves out scientific value, such as samples
+            from the South Pole–Aitken basin, line of sight to Earth for communication, and the other
+            factors a real landing site survey would weigh.
+          </p>
+
+          <h2 id="references">Data and references</h2>
+          <ul>
+            <li>
+              <a href="https://pgda.gsfc.nasa.gov/products/69">LOLA illumination (ABGVIS_85S_060M_201608)</a>:
+              the average sun visibility of each 60 m pixel from 85° S to the pole, over the ~18.6-year
+              lunar nutation cycle <a class="cite" href="#ref-10">[10]</a>.
+            </li>
+            <li>
+              <a href="https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/float_img/">LOLA DEM (LDEM_85S_10M_FLOAT)</a>:
+              the altitude of each 10 m pixel over the same area, from the Lunar Orbiter Laser
+              Altimeter <a class="cite" href="#ref-11">[11]</a>.
+            </li>
+            <li>
+              The candidate landing sites on the map come from the data Wueller et al. published with
+              their paper <a class="cite" href="#ref-5">[5]</a>, under CC BY 4.0.
+            </li>
+          </ul>
+          <ol class="references">
+            <li id="ref-1">Wueller, L., Berger, L. M., Christopher, H., Sugimoto, K., Thaker, A. D., Carton, L., Jo, W., Lee, S., Pedrelli, R., Sanchez, P., &amp; Kring, D. A. (2026). Assessing potential landing sites with favorable illumination and accessible, potentially volatile-rich permanently shadowed regions within Artemis candidate landing regions. <em>Journal of Geophysical Research: Planets</em>, 131, e2025JE009434. <a href="https://doi.org/10.1029/2025JE009434">doi:10.1029/2025JE009434</a></li>
+            <li id="ref-2">Zuber, M. T., et al. (2012). Constraints on the volatile distribution within Shackleton crater at the lunar south pole. <em>Nature</em>, 486, 378–381. <a href="https://doi.org/10.1038/nature11216">doi:10.1038/nature11216</a></li>
+            <li id="ref-3">Hayne, P. O., Aharonson, O., &amp; Schörghofer, N. (2021). Micro cold traps on the Moon. <em>Nature Astronomy</em>, 5, 169–175. <a href="https://doi.org/10.1038/s41550-020-1198-9">doi:10.1038/s41550-020-1198-9</a></li>
+            <li id="ref-4">Barker, M. K., et al. (2023). A new view of the lunar south pole from the Lunar Orbiter Laser Altimeter (LOLA). <em>The Planetary Science Journal</em>, 4, 183. <a href="https://doi.org/10.3847/PSJ/acf3e1">doi:10.3847/PSJ/acf3e1</a></li>
+            <li id="ref-5">Wueller, L., et al. (2025). Complementary data for Wueller et al. (2026) [Data set]. Zenodo. <a href="https://doi.org/10.5281/zenodo.17084058">doi:10.5281/zenodo.17084058</a></li>
+            <li id="ref-6">NASA. (2022, August 19). <a href="https://www.nasa.gov/news-release/nasa-identifies-candidate-regions-for-landing-next-americans-on-moon/">NASA identifies candidate regions for landing next Americans on Moon</a>.</li>
+            <li id="ref-7">NASA. (2024, October 28). <a href="https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/">NASA provides update on Artemis III Moon landing regions</a>.</li>
+            <li id="ref-8">George, T., Rubio, M. A., Lawrence, S. J., &amp; Curell, P. (2026). <a href="https://ntrs.nasa.gov/citations/20250011660">Artemis III site selection update: Downselection from thirteen to nine candidate regions</a>. Lunar and Planetary Science Conference.</li>
+            <li id="ref-9">Gläser, P., et al. (2014). Illumination conditions at the lunar south pole using high resolution Digital Terrain Models from LOLA. <em>Icarus</em>, 243, 78–90. <a href="https://doi.org/10.1016/j.icarus.2014.08.013">doi:10.1016/j.icarus.2014.08.013</a></li>
+            <li id="ref-10">Mazarico, E., et al. (2011). Illumination conditions of the lunar polar regions using LOLA topography. <em>Icarus</em>, 211, 1066–1081. <a href="https://doi.org/10.1016/j.icarus.2010.10.030">doi:10.1016/j.icarus.2010.10.030</a></li>
+            <li id="ref-11">Smith, D. E., et al. (2010). The Lunar Orbiter Laser Altimeter investigation on the Lunar Reconnaissance Orbiter mission. <em>Space Science Reviews</em>, 150, 209–241. <a href="https://doi.org/10.1007/s11214-009-9512-y">doi:10.1007/s11214-009-9512-y</a></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span>ISRU Site-Selection Engine</span>
+    <span id="generated"></span>
+    <a href="https://github.com/Ahsaaant/ISRU-Site-Selection-Engine">GitHub</a>
+  </footer>
+
+  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="data/results.js"></script>
+  <script src="data/reference.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
