@@ -1,0 +1,657 @@
+/* Dark throughout, to sit with the lunar basemap. The three criterion colours are validated for
+   colour-blind separation against the panel surface; text never takes a criterion colour. */
+:root {
+  color-scheme: dark;
+
+  --page: #0d0d0d;
+  --surface: #161615;
+  --surface-raised: #1f1f1d;
+  --ink: #f0efec;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --hairline: #2c2c2a;
+  --baseline: #383835;
+  --border: rgba(255, 255, 255, 0.10);
+
+  --distance: #199e70;
+  --illumination: #d95926;
+  --size: #3987e5;
+
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius: 10px;
+  --gutter: 24px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { background: var(--page); }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 15px/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--ink); text-decoration-color: var(--muted); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--ink); }
+
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+
+.eyebrow, .section-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---------- App layout: controls, map, and the top sites side by side ---------- */
+
+.app {
+  display: grid;
+  grid-template-columns: minmax(320px, 360px) minmax(0, 1fr) minmax(320px, 380px);
+  grid-template-areas: "panel map sites";
+  height: 100vh;
+  height: 100dvh;
+  min-height: 600px;
+}
+
+.panel, .sites { overflow-y: auto; background: var(--surface); }
+
+.panel { grid-area: panel; border-right: 1px solid var(--hairline); }
+.map-wrap { grid-area: map; position: relative; min-height: 0; }
+.sites { grid-area: sites; padding: 28px var(--gutter); border-left: 1px solid var(--hairline); }
+
+.masthead, .controls { padding-inline: var(--gutter); }
+.masthead { padding-block: 28px 20px; }
+.controls { padding-block: 4px 24px; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.masthead h1 { margin-top: 6px; font-size: 24px; line-height: 1.2; }
+
+.tagline { margin: 10px 0 0; color: var(--ink-2); }
+
+.masthead-links { display: flex; gap: 18px; margin-top: 14px; font-size: 13px; }
+.masthead-links a { color: var(--ink-2); }
+
+/* ---------- Controls ---------- */
+
+.control { margin: 14px 0 0; padding: 0; border: 0; min-width: 0; }
+
+.control legend {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.control-hint { color: var(--muted); font-size: 12px; font-weight: 400; text-align: right; }
+
+.option { position: relative; display: block; cursor: pointer; }
+
+.option input { position: absolute; opacity: 0; pointer-events: none; }
+
+.option-body {
+  display: block;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  color: var(--ink-2);
+  transition: background-color 120ms, color 120ms, border-color 120ms;
+}
+
+.option:hover .option-body { border-color: var(--baseline); color: var(--ink); }
+
+.option input:focus-visible + .option-body { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.option input:checked + .option-body { background: var(--ink); border-color: var(--ink); color: var(--page); }
+
+.segmented { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+
+.segmented .option-body {
+  padding: 7px 0 8px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* A small mark on the value the pipeline itself runs with */
+.option[data-default] .option-body { position: relative; }
+.option[data-default] .option-body::after, .default-mark {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+}
+.option[data-default] .option-body::after { position: absolute; bottom: 3px; left: 50%; margin-left: -2px; }
+.presets .option[data-default] .option-body::after { top: 6px; right: 6px; bottom: auto; left: auto; margin: 0; }
+
+.presets { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+.presets .option-body {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "title title" "detail glyph";
+  align-items: end;
+  gap: 2px 8px;
+  padding: 8px 10px 9px;
+}
+
+.option-title { grid-area: title; font-size: 13px; font-weight: 600; color: inherit; }
+.option-detail { grid-area: detail; font-size: 12px; opacity: 0.75; }
+
+/* Three bars, one per criterion, scaled to the preset's weights */
+.weight-glyph {
+  grid-area: glyph;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 15px;
+  margin-bottom: 2px;
+}
+
+.weight-glyph i {
+  width: 5px;
+  height: var(--h);
+  border-radius: 2px 2px 0 0;
+  background: var(--c);
+}
+
+.summary { margin: 16px 0 0; color: var(--ink-2); font-size: 13px; }
+.summary strong { color: var(--ink); font-family: var(--mono); font-weight: 600; }
+
+.defaults-note { display: flex; align-items: center; gap: 6px; margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+.default-mark { display: inline-block; flex: none; }
+
+.reset {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.reset:hover { color: var(--ink); }
+.reset[hidden] { display: none; }
+
+/* ---------- Site cards ---------- */
+
+.sites-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+
+.key { display: flex; gap: 12px; margin: 0; padding: 0; list-style: none; color: var(--ink-2); font-size: 12px; }
+.key li { display: flex; align-items: center; gap: 6px; }
+
+.swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--c);
+}
+
+.site-list { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
+
+.site {
+  padding: 14px 14px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  cursor: pointer;
+  transition: border-color 120ms, background-color 120ms;
+}
+
+.site:hover, .site.is-active { border-color: var(--baseline); background: #252523; }
+.site.is-selected { border-color: var(--ink-2); }
+
+.site-top { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 12px; }
+
+.rank, .pin {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--page);
+  font: 600 14px/1 var(--mono);
+}
+
+.site h3 { font-size: 14px; font-family: var(--mono); font-weight: 600; }
+.site h3 .arrow { color: var(--muted); font-family: var(--sans); }
+
+.coords { margin: 2px 0 0; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+.score { text-align: right; }
+.score-value { display: block; font: 600 20px/1.1 var(--mono); }
+.score-label { color: var(--muted); font-size: 11px; }
+
+/* The track is a score of 1; the fill's length is the total, split by each criterion's share */
+.bar {
+  height: 10px;
+  margin-top: 12px;
+  border-radius: 3px;
+  background: var(--hairline);
+  overflow: hidden;
+}
+
+.bar-fill { display: flex; gap: 2px; height: 100%; }
+
+.seg { flex: var(--part) 1 0; min-width: 2px; background: var(--c); }
+.seg:last-child { border-radius: 0 3px 3px 0; }
+.seg:hover { filter: brightness(1.25); }
+
+.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 0; }
+
+.metrics dt { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
+
+.metrics dd {
+  margin: 2px 0 0;
+  font: 500 13px/1.3 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.metrics .part { display: block; color: var(--muted); font-size: 11px; }
+
+.reference-note { margin: 10px 0 0; padding-top: 9px; border-top: 1px solid var(--hairline); color: var(--muted); font-size: 11px; }
+.reference-note strong { color: var(--ink-2); font-family: var(--mono); font-weight: 500; }
+
+.tag {
+  display: inline-block;
+  margin-left: 2px;
+  padding: 0 6px;
+  border: 1px solid var(--baseline);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+.tag.is-artemis { border-color: var(--ink-2); color: var(--ink-2); }
+
+.stability { margin: 10px 0 0; padding-top: 9px; border-top: 1px solid var(--hairline); color: var(--muted); font-size: 11px; }
+.stability p { margin: 0; }
+.stability .stability-tally { margin: 2px 0; color: var(--ink-2); font-size: 13px; }
+
+.site-empty {
+  padding: 14px;
+  border: 1px dashed var(--baseline);
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+/* ---------- Map ---------- */
+
+#map { position: absolute; inset: 0; background: #000; font: 12px/1.4 var(--sans); }
+
+/* Prefixed with .leaflet-container so they outrank Leaflet's own .leaflet-touch rules */
+.leaflet-container a { color: var(--ink-2); }
+
+.leaflet-container .leaflet-bar {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.leaflet-container .leaflet-bar a, .leaflet-container .leaflet-bar button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  border-radius: 0;
+  background: rgba(22, 22, 21, 0.92);
+  color: var(--ink);
+  font: 600 16px/1 var(--sans);
+  cursor: pointer;
+}
+
+.leaflet-container .leaflet-bar a:last-child, .leaflet-container .leaflet-bar button:last-child { border-bottom: 0; }
+.leaflet-container .leaflet-bar a:hover, .leaflet-container .leaflet-bar button:hover,
+.leaflet-container .leaflet-bar a:focus { background: #2a2a28; color: var(--ink); }
+.leaflet-container .leaflet-bar a.leaflet-disabled { background: rgba(22, 22, 21, 0.92); color: var(--baseline); }
+
+.leaflet-container .leaflet-control-attribution { background: rgba(13, 13, 13, 0.75); color: var(--muted); }
+
+.leaflet-container .leaflet-control-scale-line {
+  border-color: var(--ink-2);
+  background: rgba(13, 13, 13, 0.6);
+  color: var(--ink-2);
+  text-shadow: none;
+}
+
+.map-panel {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(22, 22, 21, 0.9);
+  color: var(--ink-2);
+  backdrop-filter: blur(6px);
+}
+
+.map-legend ul { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.map-legend li { display: flex; align-items: center; gap: 8px; }
+.map-legend .swatch { width: 12px; height: 12px; border-radius: 2px; }
+
+.legend-walk {
+  width: 16px;
+  height: 0;
+  border-top: 2px dashed var(--distance);
+}
+
+.legend-pin {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--page);
+  font: 600 9px/1 var(--mono);
+}
+
+.legend-reference { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--hairline); }
+.legend-reference ul { margin-top: 5px; }
+
+.legend-toggle { display: flex; align-items: center; gap: 7px; color: var(--ink); cursor: pointer; }
+.legend-toggle input { width: 13px; height: 13px; margin: 0; accent-color: var(--ink); }
+
+/* Wueller et al.'s landing sites: filled in the nine Artemis III regions, hollow elsewhere */
+.ref-anchor { background: none; border: 0; }
+
+.ref-dot {
+  display: block;
+  width: 9px;
+  height: 9px;
+  margin: 1.5px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.75);
+}
+.ref-dot.is-artemis { background: var(--ink); }
+.map-legend .ref-dot { flex: none; margin: 0 1.5px; }
+
+.leaflet-container .ref-tooltip {
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #262624;
+  color: var(--ink);
+  font: 12px/1.4 var(--sans);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+.ref-tooltip strong { display: block; font-family: var(--mono); font-weight: 600; }
+.ref-tooltip span { display: block; color: var(--ink-2); }
+.leaflet-container .ref-tooltip::before { border-top-color: #262624; }
+
+.readout { font-family: var(--mono); font-variant-numeric: tabular-nums; min-width: 190px; }
+.readout:empty { display: none; }
+
+/* Region cut-outs are drawn pixel for pixel, so the 60 m cells stay sharp when zoomed in */
+.region { image-rendering: pixelated; opacity: 0.85; }
+
+.pin-anchor { background: none; border: 0; }
+
+/* The pin's tip marks the site, so the circle sits clear of the regions and the walk below it */
+.pin {
+  position: relative;
+  filter: drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.9)) drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
+  transform: translateX(var(--offset, 0px));
+  transform-origin: 50% calc(100% + 6px);
+  transition: transform 150ms;
+}
+
+.pin::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  margin-left: -5px;
+  border: 5px solid transparent;
+  border-top: 7px solid var(--ink);
+  border-bottom: 0;
+}
+
+.pin-anchor.is-active .pin { transform: translateX(var(--offset, 0px)) scale(1.2); }
+
+.grid-label span, .pole-text {
+  display: block;
+  color: rgba(240, 239, 236, 0.55);
+  font: 11px/1 var(--mono);
+  white-space: nowrap;
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+}
+
+.grid-label span { transform: translate(-50%, -50%); }
+
+/* A crosshair centred on the pole, labelled to its right */
+.pole-cross {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 12px;
+  height: 12px;
+  background:
+    linear-gradient(var(--ink-2), var(--ink-2)) center / 1px 100% no-repeat,
+    linear-gradient(var(--ink-2), var(--ink-2)) center / 100% 1px no-repeat;
+}
+
+.pole-text { position: absolute; top: 0; left: 10px; transform: translateY(-50%); color: var(--ink-2); }
+
+/* ---------- Tooltip ---------- */
+
+.tooltip {
+  position: fixed;
+  z-index: 1000;
+  max-width: 240px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #262624;
+  color: var(--ink);
+  font-size: 12px;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.tooltip strong { display: flex; align-items: center; gap: 6px; }
+.tooltip span { color: var(--ink-2); }
+
+/* ---------- README: the write-up, set like a rendered README file ---------- */
+
+.readme { border-top: 1px solid var(--hairline); background: var(--page); }
+
+.readme-inner { max-width: 920px; margin: 0 auto; padding: 56px var(--gutter) 64px; }
+
+.readme-file { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+
+.readme-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.readme-icon { color: var(--muted); }
+
+.readme-body { padding: 8px 40px 40px; color: var(--ink-2); font-size: 15px; line-height: 1.65; }
+
+.readme-body h2, .readme-body h3 { color: var(--ink); scroll-margin-top: 16px; }
+
+.readme-body h2 {
+  margin: 40px 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 22px;
+}
+
+.readme-body .readme-title { margin-top: 28px; font-size: 30px; }
+
+.readme-body h3 { margin: 28px 0 10px; font-size: 17px; }
+
+.readme-body p, .readme-body ul, .readme-body ol { margin: 0 0 14px; }
+
+.readme-body ul, .readme-body ol { padding-left: 24px; }
+
+.readme-body li + li { margin-top: 6px; }
+
+.readme-body strong { color: var(--ink); font-weight: 600; }
+
+.readme-body code {
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  background: var(--surface-raised);
+  color: var(--ink);
+  font: 0.86em var(--mono);
+  white-space: nowrap;
+}
+
+.toc {
+  margin: 20px 0 8px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--page);
+}
+
+.toc-label { margin: 0 0 6px !important; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.readme-body .toc ol { margin: 0; columns: 2; column-gap: 32px; }
+.readme-body .toc li { margin: 0 0 4px; }
+
+.list-label { margin-bottom: 6px !important; color: var(--ink); font-weight: 600; }
+
+.cite { color: var(--muted); font-size: 0.9em; text-decoration: none; white-space: nowrap; }
+.cite:hover { color: var(--ink); text-decoration: underline; }
+
+.table-wrap { margin: 0 0 16px; overflow-x: auto; }
+
+.readme-body table { width: 100%; border-collapse: collapse; font-size: 13.5px; line-height: 1.45; }
+
+.readme-body th, .readme-body td { padding: 7px 12px; border: 1px solid var(--hairline); text-align: left; vertical-align: top; }
+
+.readme-body thead th, .readme-body tbody th { background: var(--surface-raised); color: var(--ink); font-weight: 600; }
+
+.readme-body tbody tr:nth-child(even) td { background: rgba(255, 255, 255, 0.02); }
+
+.readme-body .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.references { font-size: 13.5px; overflow-wrap: anywhere; }
+.references li:target { color: var(--ink); }
+
+.term { white-space: nowrap; }
+.term::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 5px;
+  border-radius: 2px;
+  background: var(--c);
+  vertical-align: 1px;
+}
+
+.readme-body .note {
+  margin: 20px 0;
+  padding: 4px 16px;
+  border-left: 3px solid var(--baseline);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  justify-content: center;
+  padding: 24px var(--gutter) 32px;
+  border-top: 1px solid var(--hairline);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.footer a { color: var(--muted); }
+
+/* ---------- Mid-width screens: controls beside the map, the sites in a row beneath ---------- */
+
+@media (max-width: 1199px) {
+  .app {
+    grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+    grid-template-areas: "panel map" "sites sites";
+    height: auto;
+    min-height: 0;
+  }
+
+  .panel, .sites { overflow: visible; }
+  .map-wrap { min-height: 680px; }
+  .sites { border-left: 0; border-top: 1px solid var(--hairline); }
+  .site-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* ---------- Narrow screens: controls, map, then the sites ---------- */
+
+@media (max-width: 860px) {
+  :root { --gutter: 16px; }
+
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-areas: "panel" "map" "sites"; }
+
+  .panel { border-right: 0; }
+  .masthead { padding-block: 22px 16px; }
+  .controls { padding-bottom: 20px; }
+  .map-wrap { height: 62vh; min-height: 360px; }
+  .sites { padding-block: 20px 28px; }
+  .site-list { grid-template-columns: minmax(0, 1fr); }
+  .map-legend { font-size: 11px; }
+
+  .readme-inner { padding: 32px 0 40px; }
+  .readme-file { border-inline: 0; border-radius: 0; }
+  .readme-bar { padding-inline: var(--gutter); }
+  .readme-body { padding: 4px var(--gutter) 32px; }
+  .readme-body .readme-title { font-size: 24px; }
+  .readme-body h2 { font-size: 20px; }
+  .readme-body .toc ol { columns: 1; }
+}
+
+@media (max-width: 400px) {
+  .key { gap: 8px; }
+  .control legend { flex-direction: column; gap: 2px; }
+  .control-hint { text-align: left; }
+  .metrics { gap: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+}

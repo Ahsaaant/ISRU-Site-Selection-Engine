@@ -1,5 +1,6 @@
 # Ignore the data folder which contains the large data files and rasters.
-data/
+# Anchored to the root so the website's docs/data/ is still tracked.
+/data/
 
 # Ignore the compiled Python files and cache directories.
 src/__pycache__/
